@@ -27,6 +27,8 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/></transition>
     <transition name="completeOrderPart"><service-call name="mantle.order.OrderServices.complete#OrderPart"/>
         <default-response url="."/></transition>
+    <transition name="invoiceOrderPart"><!-- <service-call name="mantle.order.OrderServices.invoice#OrderPart"/> -->
+        <default-response url="."/></transition>
     <transition name="cancelOrder"><service-call name="mantle.order.OrderServices.cancel#Order"/>
         <default-response url="."/></transition>
     <transition name="cloneOrder"><service-call name="mantle.order.OrderServices.clone#Order"/>
