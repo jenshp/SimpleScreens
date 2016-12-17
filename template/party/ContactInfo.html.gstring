@@ -1,5 +1,5 @@
-<%if (contactInfo?.postalAddress?.toName) {%><p>To: ${contactInfo.postalAddress.toName}</p><%}%>
-<%if (contactInfo?.postalAddress?.attnName) {%><p>Attn: ${contactInfo.postalAddress.attnName}</p><%}%>
+<%if (contactInfo?.postalAddress?.toName) {%><p>${ec.l10n.localize('To: ')}${contactInfo.postalAddress.toName}</p><%}%>
+<%if (contactInfo?.postalAddress?.attnName) {%><p>${ec.l10n.localize('Attn: ')}${contactInfo.postalAddress.attnName}</p><%}%>
 <%if (contactInfo?.postalAddress?.address1) {%><p>${contactInfo.postalAddress.address1}<%if (contactInfo.postalAddress.unitNumber) {%> #${contactInfo.postalAddress.unitNumber}<%}%></p><%}%>
 <%if (contactInfo?.postalAddress?.address2) {%><p>${contactInfo.postalAddress.address2}</p><%}%>
 <%if (contactInfo?.postalAddressMunicipalityGeo) {%><p>${contactInfo.postalAddressMunicipalityGeo.geoName}</p><%}%>
