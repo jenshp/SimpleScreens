@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.0.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
         default-menu-title="Accounts" default-menu-index="2">
 
     <parameter name="timePeriodId" required="true"/>
@@ -46,7 +46,7 @@ along with this software (see the LICENSE.md file). If not, see
             <link url="reopenPeriod" text="Reopen Period" confirmation="Reopen period ${ec.resource.expand('TimePeriodNameTemplate','',timePeriod)}?"
                 condition="ec.user.hasPermission('FISCAL_REOPEN')"/>
         </widgets><fail-widgets>
-            <link url="postAllFixedAssetDepreciations" text="Post Depreciation for Fixed Assets"/>
+            <link url="postFaDepreciations" text="Post Depreciation for Fixed Assets"/>
             <link url="recalculateAmounts" text="Recalculate Amounts" parameter-map="[organizationPartyId:timePeriod.partyId]"/>
             <link url="closePeriod" text="Close Period" confirmation="Close period ${ec.resource.expand('TimePeriodNameTemplate','',timePeriod)}?"/>
         </fail-widgets></section>

@@ -1,4 +1,4 @@
-<!--
+<#--
 This software is in the public domain under CC0 1.0 Universal plus a Grant of Patent License.
 
 To the extent possible under law, the author(s) have dedicated all
@@ -11,11 +11,14 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 
-<!-- See the mantle.ledger.LedgerReportServices.run#BalanceSheet service for data preparation -->
+<#-- See the mantle.ledger.LedgerReportServices.run#BalanceSheet service for data preparation -->
 
 <#assign showDetail = (detail! == "true")>
 
 <#macro showClass classInfo depth>
+    <#-- skip classes with no balance -->
+    <#if (classInfo.totalBalanceByTimePeriod['ALL']!0) == 0><#return></#if>
+
     <#assign hasChildren = classInfo.childClassInfoList?has_content>
     <tr>
         <td style="padding-left: ${(depth-1) * 2}.3em;">${ec.l10n.localize(classInfo.className)}</td>

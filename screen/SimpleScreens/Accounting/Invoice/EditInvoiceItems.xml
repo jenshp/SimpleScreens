@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.0.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
         default-menu-title="Items" default-menu-index="2">
 
     <parameter name="invoiceId" required="true" from="invoiceId ?: invoiceId_0"/>
@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="deleteInvoiceItem"><service-call name="mantle.account.InvoiceServices.delete#InvoiceItem"/>
         <default-response url="."/></transition>
 
-    <transition-include name="getGlAccountList" location="component://SimpleScreens/template/account/AccountTransitions.xml"/>
+    <transition-include name="getGlAccountListPaginated" location="component://SimpleScreens/template/account/AccountTransitions.xml"/>
 
     <actions>
         <entity-find-one entity-name="mantle.account.invoice.Invoice" value-field="invoice"/>
@@ -37,10 +37,11 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="editableStatusIds" from="new HashSet(['InvoiceInProcess', 'InvoiceIncoming', 'InvoiceReceived'])"/>
         <set field="invoiceEditable" from="invoice.statusId in editableStatusIds"/>
 
-
         <entity-find entity-name="mantle.party.PartyRole" list="fromOrgInternalList">
             <econdition field-name="partyId" from="invoice.fromPartyId"/><econdition field-name="roleTypeId" value="OrgInternal"/></entity-find>
         <set field="isFromPartyOrgInternal" from="fromOrgInternalList as boolean"/>
+        <set field="organizationPartyId" from="isFromPartyOrgInternal ? invoice.fromPartyId : invoice.toPartyId"/>
+
         <if condition="invoice.invoiceTypeEnumId == 'InvoiceSales' || invoice.invoiceTypeEnumId == 'InvoiceReturn'"><then>
             <entity-find entity-name="moqui.basic.EnumAndGroup" list="itemTypeEnumList">
                 <econdition field-name="enumGroupEnumId" from="isFromPartyOrgInternal ? 'EngItemsSales' : 'EngItemsPurchase'"/><order-by field-name="description"/></entity-find>
@@ -62,8 +63,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="itemTypeEnumId"><default-field title="Type">
                             <drop-down><list-options list="itemTypeEnumList" key="${enumId}" text="${description}"/></drop-down>
                         </default-field></field>
-                        <field name="overrideGlAccountId"><default-field title="Override GL Account">
-                            <text-line size="50" ac-transition="getGlAccountList"/></default-field></field>
+                        <field name="overrideGlAccountId"><default-field title="Override GL Account"><drop-down allow-empty="true">
+                            <dynamic-options transition="getGlAccountListPaginated" server-search="true" min-length="0"/></drop-down></default-field></field>
                         <field name="description"><default-field><text-line size="50"/></default-field></field>
                         <field name="itemDate"><default-field><date-time/></default-field></field>
                         <field name="quantity"><default-field><text-line size="4"/></default-field></field>
@@ -85,8 +86,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <default-field title="Type"><display-entity entity-name="moqui.basic.Enumeration"/></default-field>
             </field>
             <field name="overrideGlAccountId">
-                <conditional-field condition="invoiceEditable">
-                    <text-line size="50" ac-transition="getGlAccountList"/></conditional-field>
+                <conditional-field condition="invoiceEditable" tooltip="Use % (percent) as a wildcard"><drop-down allow-empty="true">
+                    <dynamic-options transition="getGlAccountListPaginated" server-search="true" min-length="0"/></drop-down></conditional-field>
                 <default-field title="Override GL Account"><display-entity entity-name="mantle.ledger.account.GlAccount"
                         text="GlAccountNameTemplate"/></default-field>
             </field>

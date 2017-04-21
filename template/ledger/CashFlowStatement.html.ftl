@@ -1,4 +1,4 @@
-<!--
+<#--
 This software is in the public domain under CC0 1.0 Universal plus a Grant of Patent License.
 
 To the extent possible under law, the author(s) have dedicated all
@@ -11,11 +11,14 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 
-<!-- See the mantle.ledger.LedgerReportServices.run#CashFlowStatement service for data preparation -->
+<#-- See the mantle.ledger.LedgerReportServices.run#CashFlowStatement service for data preparation -->
 
 <#assign showDetail = (detail! == "true")>
 
 <#macro showClass classInfo depth>
+    <#-- skip classes with nothing posted and no balance -->
+    <#if (classInfo.totalBalanceByTimePeriod['ALL']!0) == 0 && (classInfo.totalPostedByTimePeriod['ALL']!0) == 0><#return></#if>
+
     <tr>
         <td style="padding-left: ${(depth-1) * 2}.3em;">${ec.l10n.localize(classInfo.className)}</td>
         <#if (timePeriodIdList?size > 1)>
@@ -126,6 +129,7 @@ along with this software (see the LICENSE.md file). If not, see
         <#if classInfoById.COST_OF_SALES??><@showClassTotals classInfoById.COST_OF_SALES/></#if>
         <#if classInfoById.INCOME??><@showClassTotals classInfoById.INCOME/></#if>
         <#if classInfoById.EXPENSE??><@showClassTotals classInfoById.EXPENSE/></#if>
+        <#if classInfoById.NON_OP_EXPENSE??><@showClassTotals classInfoById.NON_OP_EXPENSE/></#if>
         <tr class="text-warning">
             <td><strong>${ec.l10n.localize("Net Income (see details on Income Statement)")}</strong></td>
             <#if (timePeriodIdList?size > 1)>

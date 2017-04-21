@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.0.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
         default-menu-title="Product" default-menu-index="1">
 
     <parameter name="productId" required="true"/>
@@ -108,6 +108,9 @@ along with this software (see the LICENSE.md file). If not, see
                     </field>
 
                     <field name="description"><default-field><text-area cols="58" rows="8"/></default-field></field>
+
+                    <field name="salesIntroductionDate"><default-field title="Sales Intro"><date-time/></default-field></field>
+                    <field name="salesDiscontinuationDate"><default-field title="Sales Discontinue"><date-time/></default-field></field>
 
                     <field name="submitButton"><default-field title="Update"><submit/></default-field></field>
                 </form-single>

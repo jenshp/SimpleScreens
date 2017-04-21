@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.0.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
         default-menu-include="false">
 
     <!-- NOTE: this screen is not meant to be rendered, it is just a library of forms to extend in other screens -->
@@ -59,8 +59,10 @@ along with this software (see the LICENSE.md file). If not, see
         <parameter name="indexName"/>
         <parameter name="documentType"/>
         <parameter name="includeDisabled"/>
+        <parameter name="pageIndex"/>
         <actions>
-            <if condition="!term"><script>ec.web.sendJsonResponse([])</script><return/></if>
+            <if condition="!term &amp;&amp; !pageIndex"><script>ec.web.sendJsonResponse([])</script><return/></if>
+            <set field="term" from="term ?: '*'"/>
 
             <set field="indexName" from="indexName ?: searchIndexName ?: 'mantle'"/>
             <set field="documentType" from="documentType ?: searchPartyDocType ?: 'MantleParty'"/>
@@ -156,12 +158,12 @@ along with this software (see the LICENSE.md file). If not, see
 
             <field name="toName">
                 <conditional-field condition="createPostal || postalContactMechPurposeId">
-                    <text-line size="30"/></conditional-field>
+                    <text-line size="50"/></conditional-field>
                 <default-field><ignored/></default-field>
             </field>
             <field name="attnName">
                 <conditional-field condition="createPostal || postalContactMechPurposeId" title="Attention">
-                    <text-line size="30"/></conditional-field>
+                    <text-line size="50"/></conditional-field>
                 <default-field><ignored/></default-field>
             </field>
 
@@ -177,7 +179,7 @@ along with this software (see the LICENSE.md file). If not, see
             </field>
             <field name="address2">
                 <conditional-field condition="createPostal || postalContactMechPurposeId" title="Address 2">
-                    <text-line size="30"/></conditional-field>
+                    <text-line size="40"/></conditional-field>
                 <default-field><ignored/></default-field>
             </field>
             <field name="city">
@@ -309,6 +311,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <field-ref name="postalContactMechPurposeId"/>
                 <field-ref name="toName"/>
                 <field-ref name="attnName"/>
+
                 <field-row><field-ref name="address1"/><field-ref name="unitNumber"/></field-row>
                 <field-ref name="address2"/>
                 <field-row-big title="City/Zip"><field-ref name="city"/>
@@ -316,10 +319,12 @@ along with this software (see the LICENSE.md file). If not, see
                 <field-row-big title="Country/State"><field-ref name="countryGeoId"/>
                     <!--<field-ref name="stateProvinceGeoId"/>--></field-row-big>
                 <field-row-big><field-ref name="municipalityGeoId"/>
-                <field-ref name="stateProvinceGeoId"/></field-row-big>
+                    <field-ref name="stateProvinceGeoId"/></field-row-big>
+
                 <field-ref name="telecomContactMechPurposeId"/>
                 <field-row-big title="Phone"><field-ref name="countryCode"/><field-ref name="areaCode"/>
                     <field-ref name="contactNumber"/><field-ref name="telecomExtension"/></field-row-big>
+
                 <field-ref name="emailContactMechPurposeId"/>
                 <field-ref name="emailAddress"/>
                 <fields-not-referenced/>
@@ -382,8 +387,8 @@ along with this software (see the LICENSE.md file). If not, see
             </field>
             <field name="expireYear">
                 <conditional-field title="" condition="isCreditCard"><drop-down current="selected">
-                    <option key="2015"/><option key="2016"/><option key="2017"/><option key="2018"/>
-                    <option key="2019"/><option key="2020"/><option key="2021"/><option key="2022"/>
+                    <option key="2017"/><option key="2018"/><option key="2019"/><option key="2020"/><option key="2021"/>
+                    <option key="2022"/><option key="2023"/><option key="2024"/><option key="2025"/><option key="2026"/>
                 </drop-down></conditional-field>
                 <default-field><ignored/></default-field>
             </field>
@@ -399,19 +404,23 @@ along with this software (see the LICENSE.md file). If not, see
                 <default-field><ignored/></default-field>
             </field>
 
-            <field name="countryGeoId"><default-field title="Country"><hidden default-value="USA"/></default-field></field>
             <field name="address1"><default-field title="Address 1"><text-line size="30"/></default-field></field>
             <field name="unitNumber"><default-field title="Unit"><text-line size="10"/></default-field></field>
             <field name="address2"><default-field title="Address 2"><text-line size="30"/></default-field></field>
             <field name="city"><default-field title="" tooltip="City"><text-line size="16"/></default-field></field>
+
+            <field name="countryGeoId"><default-field title="">
+                <drop-down no-current-selected-key="USA">
+                    <entity-options key="${geoId}" text="${geoName}">
+                        <entity-find entity-name="moqui.basic.Geo" list="geoList">
+                            <econdition field-name="geoTypeEnumId" value="GEOT_COUNTRY"/>
+                            <order-by field-name="geoName"/></entity-find>
+                    </entity-options>
+                </drop-down>
+            </default-field></field>
             <field name="stateProvinceGeoId"><default-field title="">
-                <drop-down><entity-options key="${toGeoId}" text="${geoName}">
-                    <entity-find entity-name="GeoAssocAndToDetail">
-                        <econdition field-name="geoId" value="USA"/>
-                        <econdition field-name="geoAssocTypeEnumId" value="GAT_REGIONS"/>
-                        <order-by field-name="geoName"/>
-                    </entity-find>
-                </entity-options></drop-down>
+                <drop-down><dynamic-options transition="getGeoCountryStates" value-field="geoId" label-field="label">
+                    <depends-on field="countryGeoId"/></dynamic-options></drop-down>
             </default-field></field>
             <field name="postalCode"><default-field title="" tooltip="Zip/Postal Code"><text-line size="8"/></default-field></field>
             <field name="postalCodeExt"><default-field title="" tooltip="Zip/Postal Code Extension"><text-line size="4"/></default-field></field>
@@ -450,11 +459,12 @@ along with this software (see the LICENSE.md file). If not, see
                     <field-ref name="expireYear"/></field-row-big>
 
                 <field-ref name="postalContactMechId"/>
-                <field-ref name="countryGeoId"/>
                 <field-row><field-ref name="address1"/><field-ref name="unitNumber"/></field-row>
                 <field-ref name="address2"/>
-                <field-row-big title="City/State/Zip"><field-ref name="city"/><field-ref name="stateProvinceGeoId"/>
+                <field-row-big title="City/Zip"><field-ref name="city"/>
                     <field-ref name="postalCode"/><field-ref name="postalCodeExt"/></field-row-big>
+                <field-row-big title="Country/State"><field-ref name="countryGeoId"/>
+                    <field-ref name="stateProvinceGeoId"/></field-row-big>
                 <field-ref name="telecomContactMechId"/>
                 <field-row-big title="Phone"><field-ref name="countryCode"/><field-ref name="areaCode"/>
                     <field-ref name="contactNumber"/></field-row-big>
