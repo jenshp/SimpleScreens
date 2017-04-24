@@ -12,14 +12,14 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.0.xsd"
-        default-menu-title="Outgoing Shipments" default-menu-index="2">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        default-menu-title="Find Shipments" default-menu-index="2">
 
     <transition name="createShipment"><service-call name="mantle.shipment.ShipmentServices.create#Shipment"/>
         <default-response url="../ShipmentDetail"/></transition>
     <transition name="shipmentDetail"><default-response url="../ShipmentDetail"/></transition>
 
-    <transition-include name="getPartyList" location="component://SimpleScreens/template/party/PartyForms.xml"/>
+    <transition-include name="searchPartyList" location="component://SimpleScreens/template/party/PartyForms.xml"/>
 
     <actions>
         <service-call name="org.moqui.impl.BasicServices.find#EnumerationByParent" out-map="incomingTypeOut"
@@ -43,6 +43,8 @@ along with this software (see the LICENSE.md file). If not, see
             <econdition field-name="facilityTypeEnumId" value="FcTpWarehouse"/>
             <order-by field-name="facilityName"/>
         </entity-find>
+
+        <set field="defaultFacilityId" from="ec.user.getPreference('FacilityGeneralDefault')"/>
     </actions>
     <widgets>
         <container-dialog id="NewOutgoingShipmentDialog" button-text="New Outgoing Shipment">
@@ -50,13 +52,11 @@ along with this software (see the LICENSE.md file). If not, see
                 <field name="shipmentTypeEnumId"><default-field title="Type">
                     <drop-down><list-options list="outgoingTypeOut.enumerationList" key="${enumId}" text="${description}"/></drop-down>
                 </default-field></field>
-                <field name="originFacilityId"><default-field title="Origin Facility">
-                    <drop-down>
-                        <list-options list="facilityList" key="${facilityId}" text="${facilityName} [${pseudoId}]"/>
-                    </drop-down>
+                <field name="originFacilityId" from="originFacilityId ?: defaultFacilityId"><default-field title="Origin Facility">
+                    <drop-down><list-options list="facilityList" key="${facilityId}" text="FacilityNameTemplate"/></drop-down>
                 </default-field></field>
                 <field name="toPartyId"><default-field title="To Party">
-                    <text-line ac-transition="getPartyList" ac-min-length="2" size="50" parameter-map="[roleTypeId:'Customer']"/>
+                    <drop-down allow-empty="true"><dynamic-options transition="searchPartyList" server-search="true" min-length="2"/></drop-down>
                 </default-field></field>
                 <field name="estimatedReadyDate"><default-field title="Ready Date"><date-time/></default-field></field>
                 <field name="submitButton"><default-field title="Create"><submit/></default-field></field>
@@ -68,18 +68,10 @@ along with this software (see the LICENSE.md file). If not, see
                     <drop-down><list-options list="incomingTypeOut.enumerationList" key="${enumId}" text="${description}"/></drop-down>
                 </default-field></field>
                 <field name="fromPartyId"><default-field title="From Party">
-                    <drop-down>
-                        <entity-options key="${partyId}" text="${organizationName?:''}${firstName?:''} ${lastName?:''} [${pseudoId}]">
-                            <entity-find entity-name="mantle.party.PartyDetailAndRole">
-                                <econdition field-name="roleTypeId" value="Supplier"/>
-                                <econdition field-name="disabled" value="N" or-null="true"/>
-                                <order-by field-name="organizationName,firstName"/></entity-find></entity-options>
-                    </drop-down>
+                    <drop-down allow-empty="true"><dynamic-options transition="searchPartyList" server-search="true" min-length="2"/></drop-down>
                 </default-field></field>
-                <field name="destinationFacilityId"><default-field title="Origin Facility">
-                    <drop-down>
-                        <list-options list="facilityList" key="${facilityId}" text="${facilityName} [${pseudoId}]"/>
-                    </drop-down>
+                <field name="destinationFacilityId" from="destinationFacilityId ?: defaultFacilityId"><default-field title="Destination Facility">
+                    <drop-down><list-options list="facilityList" key="${facilityId}" text="FacilityNameTemplate"/></drop-down>
                 </default-field></field>
                 <field name="estimatedReadyDate"><default-field title="Ready Date"><date-time/></default-field></field>
                 <field name="submitButton"><default-field title="Create"><submit/></default-field></field>
@@ -118,13 +110,15 @@ along with this software (see the LICENSE.md file). If not, see
             </field>
             <field name="fromPartyId">
                 <header-field title="From Party" show-order-by="true">
-                    <text-line ac-transition="getPartyList" ac-min-length="2" size="20" parameter-map="[roleTypeId:'Supplier']"/></header-field>
-                <default-field><display-entity entity-name="mantle.party.PartyDetail" text="${organizationName?:''}${firstName?:''} ${lastName?:''} [${pseudoId}]"/></default-field>
+                    <drop-down allow-empty="true"><dynamic-options transition="searchPartyList" server-search="true" min-length="2"/></drop-down>
+                </header-field>
+                <default-field><display-entity entity-name="mantle.party.PartyDetail" text="PartyNameTemplate"/></default-field>
             </field>
             <field name="toPartyId">
                 <header-field title="To Party" show-order-by="true">
-                    <text-line ac-transition="getPartyList" ac-min-length="2" size="20" parameter-map="[roleTypeId:'Customer']"/></header-field>
-                <default-field><display-entity entity-name="mantle.party.PartyDetail" text="${organizationName?:''}${firstName?:''} ${lastName?:''} [${pseudoId}]"/></default-field>
+                    <drop-down allow-empty="true"><dynamic-options transition="searchPartyList" server-search="true" min-length="2"/></drop-down>
+                </header-field>
+                <default-field><display-entity entity-name="mantle.party.PartyDetail" text="PartyNameTemplate"/></default-field>
             </field>
             <field name="entryDate"><header-field show-order-by="true"><date-period/></header-field>
                 <default-field><display/></default-field></field>

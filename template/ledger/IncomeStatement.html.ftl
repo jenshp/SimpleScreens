@@ -1,4 +1,4 @@
-<!--
+<#--
 This software is in the public domain under CC0 1.0 Universal plus a Grant of Patent License.
 
 To the extent possible under law, the author(s) have dedicated all
@@ -11,11 +11,14 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 
-<!-- See the mantle.ledger.LedgerReportServices.run#BalanceSheet service for data preparation -->
+<#-- See the mantle.ledger.LedgerReportServices.run#BalanceSheet service for data preparation -->
 
 <#assign showDetail = (detail! == "true")>
 
 <#macro showClass classInfo depth>
+    <#-- skip classes with nothing posted -->
+    <#if (classInfo.totalPostedByTimePeriod['ALL']!0) == 0><#return></#if>
+
     <tr>
         <td style="padding-left: ${(depth-1) * 2}.3em;">${ec.l10n.localize(classInfo.className)}</td>
         <#if (timePeriodIdList?size > 1)>
@@ -52,7 +55,7 @@ along with this software (see the LICENSE.md file). If not, see
     </#list>
     <#if classInfo.childClassInfoList?has_content>
         <tr<#if depth == 1> class="text-info"</#if>>
-            <td style="padding-left: ${(depth-1) * 2}.3em;"><strong>${ec.l10n.localize(classInfo.className + " Total")}</strong></td>
+            <td style="padding-left: ${(depth-1) * 2}.3em;"><strong>${ec.l10n.localize("Total " + classInfo.className)}</strong></td>
             <#if (timePeriodIdList?size > 1)>
                 <td class="text-right"><strong>${ec.l10n.formatCurrency(classInfo.totalPostedByTimePeriod['ALL']!0, currencyUomId)}</strong></td>
             </#if>
@@ -80,18 +83,18 @@ along with this software (see the LICENSE.md file). If not, see
         <@showClass classInfoById.REVENUE 1/>
         <@showClass classInfoById.CONTRA_REVENUE 1/>
         <tr class="text-info">
-            <td><strong>${ec.l10n.localize("Net Sales")}</strong></td>
+            <td><strong>${ec.l10n.localize("Net Revenue")}</strong> (${ec.l10n.localize("Revenue")} + ${ec.l10n.localize("Contra Revenue")})</td>
             <#if (timePeriodIdList?size > 1)>
                 <td class="text-right"><strong>${ec.l10n.formatCurrency(classInfoById.REVENUE.totalPostedByTimePeriod['ALL']!0 + classInfoById.CONTRA_REVENUE.totalPostedByTimePeriod['ALL']!0, currencyUomId)}</strong></td>
             </#if>
             <#list timePeriodIdList as timePeriodId>
-                <td class="text-right"><strong>${ec.l10n.formatCurrency(classInfoById.REVENUE.totalPostedByTimePeriod[timePeriodId]!0 + classInfoById.CONTRA_REVENUE.totalPostedByTimePeriod[timePeriodId]!0, currencyUomId)}</strong></td>
+                <td class="text-right"><strong>${ec.l10n.formatCurrency((classInfoById.REVENUE.totalPostedByTimePeriod[timePeriodId]!0) + (classInfoById.CONTRA_REVENUE.totalPostedByTimePeriod[timePeriodId]!0), currencyUomId)}</strong></td>
             </#list>
         </tr>
 
         <@showClass classInfoById.COST_OF_SALES 1/>
         <tr class="text-success" style="border-bottom: solid black;">
-            <td><strong>${ec.l10n.localize("Gross Profit On Sales")}</strong></td>
+            <td><strong>${ec.l10n.localize("Gross Profit On Sales")}</strong> (${ec.l10n.localize("Net Revenue")} + ${ec.l10n.localize("Cost of Sales")})</td>
             <#if (timePeriodIdList?size > 1)>
                 <td class="text-right"><strong>${ec.l10n.formatCurrency(grossProfitOnSalesMap['ALL']!0, currencyUomId)}</strong></td>
             </#if>
@@ -112,6 +115,7 @@ along with this software (see the LICENSE.md file). If not, see
             </#list>
         </tr>
 
+        <@showClass classInfoById.NON_OP_EXPENSE 1/>
         <tr class="text-success" style="border-bottom: solid black;">
             <td><strong>${ec.l10n.localize("Net Income")}</strong></td>
             <#if (timePeriodIdList?size > 1)>

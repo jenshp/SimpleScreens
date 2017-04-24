@@ -104,8 +104,8 @@ class MyAccountScreenTests extends Specification {
         "User/Account" | ['worker@test.com', 'Worker', 'Change Password']
 
         "Expense/FindExpenseInvoice" | ['Test Vendor', 'Billed Through']
-        "Expense/EditExpenseInvoice?invoiceId=55900" | ['Test Worker', 'Billed Through', '849.12']
+        "Expense/EditExpenseInvoice?invoiceId=55900" | ['Test Worker', 'Billed Through', '1009.12']
         "Expense/EditExpenseInvoiceItems?invoiceId=55900" |
-                ['Expense - Travel Air', 'United SFO-LAX', 'Sales - Time Entry', '240.00']
+                ['Travel Air', 'United SFO-LAX', 'Time Entry', '240.00']
     }
 }

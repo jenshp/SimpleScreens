@@ -12,20 +12,21 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.0.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
         default-menu-include="true" default-menu-index="1">
 
     <parameter name="assetId" required="true"/>
 
     <transition name="updateAsset"><service-call name="update#mantle.product.asset.Asset"/><default-response url="."/></transition>
 
-    <transition name="editProduct"><default-response url="../../Catalog/Product/EditProduct"/></transition>
-    <transition name="orderDetail"><default-response url="../../Order/OrderDetail"/></transition>
-    <transition name="shipmentDetail"><default-response url="../../Shipment/ShipmentDetail"/></transition>
+    <transition name="editProduct"><default-response url="//${appRoot}/Catalog/Product/EditProduct"/></transition>
+    <transition name="orderDetail"><default-response url="//${appRoot}/Order/OrderDetail"/></transition>
+    <transition name="shipmentDetail"><default-response url="//${appRoot}/Shipment/ShipmentDetail"/></transition>
     <transition name="findTransactionEntry"><default-response url="//${appRoot}/Accounting/Transaction/FindTransactionEntry"/></transition>
 
-    <transition-include name="getPartyList" location="component://SimpleScreens/template/party/PartyForms.xml"/>
+    <transition-include name="searchPartyList" location="component://SimpleScreens/template/party/PartyForms.xml"/>
     <transition-include name="getProductList" location="component://SimpleScreens/template/product/ProductTransitions.xml"/>
+    <transition-include name="getLotList" location="component://SimpleScreens/template/product/ProductTransitions.xml"/>
 
     <actions>
         <service-call name="mantle.product.AssetServices.get#AssetDisplayInfo" in-map="context" out-map="context"/>
@@ -65,7 +66,6 @@ along with this software (see the LICENSE.md file). If not, see
                         <link url="productionRun" text="${asset.acquireWorkEffortId}" link-type="anchor" condition="asset.acquireWorkEffortId"
                                 parameter-map="[workEffortId:asset.acquireWorkEffortId]"/></default-field></field>
 
-
                     <field name="classEnumId"><default-field title="Class">
                         <widget-template-include location="component://webroot/template/screen/BasicWidgetTemplates.xml#enumDropDown">
                             <set field="enumTypeId" value="AssetClass"/><set field="allowEmpty" value="true"/></widget-template-include>
@@ -75,15 +75,20 @@ along with this software (see the LICENSE.md file). If not, see
                         <link url="editProduct" text="Edit Product" parameter-map="[productId:asset.productId]" condition="asset.productId"/>
                     </default-field></field>
                     <field name="ownerPartyId"><default-field title="Owner Party">
-                        <text-line ac-transition="getPartyList" size="50"/></default-field></field>
+                        <drop-down><dynamic-options transition="searchPartyList" server-search="true" min-length="2"/></drop-down>
+                    </default-field></field>
                     <field name="acquiredDate"><default-field><date-time/></default-field></field>
+                    <field name="manufacturedDate"><default-field><date-time/></default-field></field>
                     <field name="expectedEndOfLife"><default-field><date-time type="date"/></default-field></field>
+
+                    <field name="lotId"><default-field title="Lot"><drop-down allow-empty="true">
+                        <dynamic-options transition="getLotList" server-search="true" min-length="2"/></drop-down></default-field></field>
 
                     <field name="depreciationTypeEnumId"><default-field title="Depreciation Type">
                         <widget-template-include location="component://webroot/template/screen/BasicWidgetTemplates.xml#enumDropDown">
                             <set field="enumTypeId" value="DepreciationType"/><set field="allowEmpty" value="true"/></widget-template-include>
                     </default-field></field>
-                    <field name="acquireCostUomId"><default-field><display-entity entity-name="moqui.basic.Uom"/></default-field></field>
+                    <field name="acquireCostUomId"><default-field title="Cost Unit"><display-entity entity-name="moqui.basic.Uom"/></default-field></field>
                     <field name="acquireCost"><default-field>
                         <text-line size="8"/>
                         <link url="orderDetail" text="PO #${asset.acquireOrderId?:'N/A'}" parameter-map="[orderId:asset.acquireOrderId]"
@@ -141,6 +146,9 @@ along with this software (see the LICENSE.md file). If not, see
                                             <label text="(reservation removed)" condition="!assetReservation"/>
                                             <link url="orderDetail" text="Order #${assetReservation.orderId}" link-type="anchor"
                                                     parameter-map="[orderId:assetReservation.orderId]" condition="assetReservation?.orderId"/>
+                                        </conditional-field>
+                                        <conditional-field condition="otherAssetId">
+                                            <link url="." text="Move, other asset: ${otherAssetId}" link-type="anchor" parameter-map="[assetId:otherAssetId]"/>
                                         </conditional-field>
                                         <conditional-field condition="physicalInventory">
                                             <label text="Physical Inventory #${physicalInventoryId} (${varianceReasonEnum?.description})"/>

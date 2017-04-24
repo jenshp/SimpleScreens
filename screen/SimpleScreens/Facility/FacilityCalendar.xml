@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.0.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
         default-menu-title="Calendar" default-menu-index="3">
 
     <parameter name="facilityId" required="true"/>
@@ -24,24 +24,21 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response type="none"/>
     </transition>
 
-    <pre-actions>
-        <script>html_scripts.add("/ssstatic/lib/fullcalendar/fullcalendar.min.js")</script>
-        <script>html_stylesheets.add("/ssstatic/lib/fullcalendar/fullcalendar.min.css")</script>
-    </pre-actions>
     <actions>
         <entity-find-one entity-name="mantle.facility.Facility" value-field="facility"/>
     </actions>
     <widgets>
         <render-mode>
-            <text type="html"><![CDATA[
+            <text type="html,vuet"><![CDATA[
                 <div id="calendar"></div>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.1.0/fullcalendar.min.js" type="text/javascript"></script>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.1.0/locale-all.js" type="text/javascript"></script>
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.1.0/fullcalendar.min.css" type="text/css"/>
                 <script>
-$(document).ready(function() {
     $('#calendar').fullCalendar({ timezone: false, defaultView: 'agendaWeek',
         header: { left: 'prev,next today', center: 'title', right: 'month,agendaWeek,agendaDay' },
         eventSources: [ { url: "${sri.buildUrl('getCalendarEvents').url}", type: 'POST', data: { moquiSessionToken:'${ec.web.sessionToken}', facilityId: '${facilityId}' } } ]
-    })
-});
+    });
                 </script>
             ]]></text>
         </render-mode>
