@@ -104,14 +104,11 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="storeContactInfo"><service-call name="mantle.party.ContactServices.store#PartyContactInfo"/>
         <default-response url="."/></transition>
     <!-- this should ALWAYS be included for postal address forms (copy into your screen) -->
-    <transition name="getGeoCountryStates"><service-call name="moqui-chile.GeoServices.get#GeoRegionsForDropDown"
-            web-send-json-response="resultList"/>
+    <transition name="getGeoCountryStates"><service-call name="org.moqui.impl.BasicServices.get#GeoRegionsForDropDown"
+        in-map="[geoId:countryGeoId]" web-send-json-response="resultList"/>
         <default-response type="none"/></transition>
     <transition name="getGeoStateCounties"><service-call name="org.moqui.impl.BasicServices.get#GeoRegionsForDropDown"
             out-map="context" in-map="[geoId:stateGeoId, geoTypeEnumId:'GEOT_COUNTY']" web-send-json-response="resultList"/>
-        <default-response type="none"/></transition>
-    <transition name="getGeoMunicipalities">
-        <service-call name="moqui-chile.GeoServices.get#GeoMunicipalitiesForDropDown" web-send-json-response="resultList"/>
         <default-response type="none"/></transition>
 
     <!-- an example of a transition to call store#PaymentMethodInfo; this does a create or update -->
@@ -200,22 +197,11 @@ along with this software (see the LICENSE.md file). If not, see
                 </conditional-field>
                 <default-field><ignored/></default-field>
             </field>
-            <field name="municipalityGeoId">
-                <conditional-field condition="createPostal || postalContactMechPurposeId" title="Municipality">
-                    <drop-down allow-empty="true">
-                        <dynamic-options transition="getGeoMunicipalities" value-field="geoId" label-field="label">
-                            <depends-on field="countryGeoId"/>
-                            <!--<depends-on field="stateProvinceGeoId"/>-->
-                        </dynamic-options>
-                    </drop-down>
-                </conditional-field>
-            </field>
             <field name="stateProvinceGeoId">
                 <conditional-field condition="createPostal || postalContactMechPurposeId" title="">
                     <drop-down>
                         <dynamic-options transition="getGeoCountryStates" value-field="geoId" label-field="label">
-                            <depends-on field="municipalityGeoId"/>
-                            <!--<depends-on field="countryGeoId"/>-->
+                            <depends-on field="countryGeoId"/>
                         </dynamic-options>
                         <!--
                         <entity-options key="${toGeoId}" text="${geoName}">
@@ -316,9 +302,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <field-ref name="address2"/>
                 <field-row-big title="City/Zip"><field-ref name="city"/>
                     <field-ref name="postalCode"/><field-ref name="postalCodeExt"/></field-row-big>
-                <field-row-big title="Country/State"><field-ref name="countryGeoId"/></field-row-big>
-                <field-row-big><field-ref name="municipalityGeoId"/>
-                <field-ref name="stateProvinceGeoId"/></field-row-big>
+                <field-row-big title="Country/State"><field-ref name="countryGeoId"/>
+                    <field-ref name="stateProvinceGeoId"/></field-row-big>
                 <field-ref name="telecomContactMechPurposeId"/>
                 <field-row-big title="Phone"><field-ref name="countryCode"/><field-ref name="areaCode"/>
                     <field-ref name="contactNumber"/><field-ref name="telecomExtension"/></field-row-big>
