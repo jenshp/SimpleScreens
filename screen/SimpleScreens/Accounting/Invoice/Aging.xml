@@ -25,6 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="statusId" from="statusId ?: (invoiceType == 'Payable' ? 'InvoiceReceived,InvoiceApproved' : 'InvoiceFinalized,InvoiceSent')"/>
         <set field="statusId_op" value="in"/>
         <set field="referenceNumber" from="refNum"/>
+        <set field="dbConfName" from="ec.entity.getDatabaseConfName('mantle.account.invoice.Invoice')"/>
         <!-- special case where must be named asOfDate as InvoiceAgingSummary looks for this field in the context -->
         <!-- this doesn't work with current InvoiceAgingSummary view-entity definition, see comments in view-entity AccountingAccountViewEntities.xml
         <set field="asOfDate" from="asOfDate ? ec.l10n.parseTimestamp(asOfDate + ' 23:59:59.999', 'yyyy-MM-dd HH:mm:ss.SSS') : null"/>
@@ -63,6 +64,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <default-field><link url="findInvoice" text="${invoiceCount ? (invoiceCount + ' invoice' + (invoiceCount &gt; 1 ? 's' : '')) : ''}"
                     link-type="anchor" parameter-map="[fromPartyId:fromPartyId, toPartyId:toPartyId, statusId:statusId]"/></default-field>
             </field>
+            <!-- leave this out, more annoying than helpful if there are different types:
             <field name="invoiceTypeEnumId">
                 <header-field title="Type" show-order-by="true">
                     <widget-template-include location="component://webroot/template/screen/BasicWidgetTemplates.xml#enumDropDown">
@@ -71,6 +73,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </header-field>
                 <default-field><display-entity entity-name="moqui.basic.Enumeration"/></default-field>
             </field>
+            -->
 
             <field name="fromPartyId">
                 <header-field title="From">

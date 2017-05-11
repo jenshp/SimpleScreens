@@ -29,13 +29,27 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="mantle.shipment.ShipmentServices.get#ShipmentDisplayInfo" in-map="[shipmentId:shipmentId]" out-map="context"/>
         <service-call name="org.moqui.impl.BasicServices.find#Enumeration" in-map="[enumTypeId:'RejectionReason']" out-map="reasonOut"/>
         <set field="facilityId" from="shipmentRouteSegmentList ? shipmentRouteSegmentList[shipmentRouteSegmentList.size()-1].destinationFacilityId : null"/>
-        <set field="quantityAccepted" from="shipmentItem.quantity"/>
+
+        <!-- get quantityNotHandled total for quantityAccepted, try to get the default acquireCost -->
+        <set field="quantityAccepted" from="0.0"/>
+        <entity-find entity-name="mantle.shipment.ShipmentItemSource" list="shipmentItemSourceList">
+            <econdition field-name="shipmentId"/><econdition field-name="productId"/>
+            <econdition field-name="quantityNotHandled" operator="greater" from="0.0"/>
+        </entity-find>
+        <iterate list="shipmentItemSourceList" entry="shipmentItemSource">
+            <set field="quantityAccepted" from="quantityAccepted + shipmentItemSource.quantityNotHandled"/>
+            <if condition="!acquireCost &amp;&amp; shipmentItemSource.orderId &amp;&amp; shipmentItemSource.orderItemSeqId">
+                <entity-find-one entity-name="mantle.order.OrderItem" value-field="orderItem">
+                    <field-map field-name="orderId" from="shipmentItemSource.orderId"/>
+                    <field-map field-name="orderItemSeqId" from="shipmentItemSource.orderItemSeqId"/>
+                </entity-find-one>
+                <set field="acquireCost" from="orderItem?.unitAmount"/>
+            </if>
+        </iterate>
     </actions>
     <widgets>
         <form-single name="ReceiveForm" transition="receive">
             <field name="shipmentId"><default-field><hidden/></default-field></field>
-            <field name="statusId"><default-field title="Status">
-                <display-entity entity-name="moqui.basic.StatusItem"/></default-field></field>
             <field name="fromPartyName"><default-field title="Supplier">
                 <display text="PartyNameTemplate" text-map="fromPartyDetail"/></default-field></field>
             <field name="productId">
@@ -45,6 +59,10 @@ along with this software (see the LICENSE.md file). If not, see
                     <drop-down allow-empty="true"><dynamic-options transition="getProductList" server-search="true" min-length="0"/></drop-down>
                 </default-field>
             </field>
+            <field name="statusId"><default-field title="Status" tooltip="For inventory defaults to Available, otherwise defaults to In Storage">
+                <widget-template-include location="component://webroot/template/screen/BasicWidgetTemplates.xml#statusDropDown">
+                    <set field="statusTypeId" value="Asset"/><set field="allowEmpty" value="true"/></widget-template-include>
+            </default-field></field>
 
             <field name="receivedDate" from="ec.user.nowTimestamp"><default-field title="Received Date"><date-time/></default-field></field>
 
@@ -60,6 +78,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <text-line size="20"/></default-field></field>
             <field name="manufacturedDate"><default-field title="Manufactured"><date-time type="date"/></default-field></field>
             <field name="expectedEndOfLife"><default-field title="Expiration"><date-time type="date"/></default-field></field>
+            <field name="acquireCost"><default-field tooltip="Defaults to unit amount on related order item">
+                <text-line size="8" format="#,##0.00"/></default-field></field>
 
             <field name="quantityAccepted"><default-field><text-line size="8"/></default-field></field>
             <field name="quantityRejected"><default-field><text-line size="8"/></default-field></field>
