@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
-        default-menu-title="Asset Valuation" default-menu-include="false">
+        default-menu-title="Inventory Valuation" default-menu-include="false">
 
     <transition name="editProduct"><default-response url="//${appRoot}/Catalog/Product/EditProduct"/></transition>
     <transition name="assetDetail"><default-response url="//${appRoot}/Asset/AssetDetail"/></transition>
@@ -58,7 +58,7 @@ along with this software (see the LICENSE.md file). If not, see
             </field>
 
             <field name="facilityId">
-                <header-field title="Facility">
+                <header-field title="Facility" show-order-by="true">
                     <drop-down allow-empty="true"><entity-options key="${facilityId}" text="FacilityNameTemplate">
                         <entity-find entity-name="mantle.facility.Facility">
                             <econdition field-name="facilityTypeEnumId" value="FcTpWarehouse"/>

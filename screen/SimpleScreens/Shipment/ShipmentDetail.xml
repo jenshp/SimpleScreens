@@ -51,14 +51,24 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/></transition>
     <transition name="removeShipmentLabelInfo"><service-call name="mantle.shipment.CarrierServices.remove#ShipmentLabelInfo"/>
         <default-response url="."/></transition>
+    <transition name="printShipmentLabels"><service-call name="mantle.shipment.ShipmentServices.print#ShipmentLabels"/>
+        <default-response url="."/></transition>
 
     <transition name="sendShipmentStoreEmail"><service-call name="mantle.shipment.ShipmentServices.send#ShipmentStoreEmail"/>
         <default-response url="."/></transition>
+    <transition name="sendEmailMessage"><service-call name="org.moqui.impl.EmailServices.send#EmailMessage"/>
+        <default-response url="."/></transition>
+
     <transition name="orderDetail"><default-response url="//${appRoot}/Order/OrderDetail"/></transition>
     <transition name="editInvoice"><default-response url="//${appRoot}/Accounting/Invoice/EditInvoice"/></transition>
     <transition name="editPayment"><default-response url="//${appRoot}/Accounting/Payment/EditPayment"/></transition>
     <transition name="editTransaction"><default-response url="//${appRoot}/Accounting/Transaction/EditTransaction"/></transition>
     <transition name="assetDetail"><default-response url="//${appRoot}/Asset/AssetDetail"/></transition>
+
+    <transition name="editFacility"><default-response url="//${appRoot}/Facility/EditFacility"/></transition>
+    <transition name="editParty"><default-response url="//${appRoot}/Party/EditParty"/></transition>
+    <transition name="editSupplier"><default-response url="//${appRoot}/Supplier/EditSupplier"/></transition>
+    <transition name="editCustomer"><default-response url="//${appRoot}/Customer/EditCustomer"/></transition>
 
     <transition name="createContent"><service-call name="mantle.shipment.ShipmentServices.create#ShipmentContent"/>
         <default-response url="."/></transition>
@@ -82,7 +92,12 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/></transition>
     <transition name="packItemSource"><service-call name="mantle.shipment.ShipmentServices.pack#ShipmentItemSource"/>
         <default-response url="."/></transition>
+    <transition name="unpackItemIssuance"><service-call name="mantle.shipment.ShipmentServices.unpack#ShipmentItemIssuance"/>
+        <default-response url="."/></transition>
+
     <transition name="createPackage"><service-call name="mantle.shipment.ShipmentServices.create#ShipmentPackage"/>
+        <default-response url="."/></transition>
+    <transition name="deletePackage"><service-call name="mantle.shipment.ShipmentServices.delete#ShipmentPackage"/>
         <default-response url="."/></transition>
     <transition name="updatePackageAndRouteSeg"><service-call name="mantle.shipment.ShipmentServices.update#ShipmentPackageAndRouteSeg"/>
         <default-response url="."/></transition>
@@ -99,7 +114,7 @@ along with this software (see the LICENSE.md file). If not, see
         <script>
             outList = []
             for (sop in shipOptsOut.shippingOptions) outList.add([value:"${sop.carrierPartyId}:${sop.shipmentMethodEnumId}",
-                label:"${sop.carrierPartyId != '_NA_' ? (sop.carrierName + ' - ') : ''}${sop.shipmentMethodDescription}${sop.shippingTotal != null ? ' ' + ec.l10n.format(sop.shippingTotal, '#,##0.00') : ''}"])
+                label:"${sop.description ? sop.description : (sop.carrierPartyId != '_NA_' ? (sop.carrierName + ' - ') : '') + sop.shipmentMethodDescription}${sop.shippingTotal != null ? ' ' + ec.l10n.format(sop.shippingTotal, '#,##0.00') : ''}"])
             ec.web.sendJsonResponse(outList)
         </script>
     </actions><default-response type="none"/></transition>
@@ -134,9 +149,9 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="mantle.shipment.ShipmentServices.get#ShipmentDisplayInfo" in-map="[shipmentId:shipmentId]" out-map="context"/>
 
         <entity-find entity-name="mantle.facility.Facility" list="facilityList">
-            <econdition field-name="facilityTypeEnumId" value="FcTpWarehouse"/>
-            <order-by field-name="facilityName"/>
-        </entity-find>
+            <econdition field-name="facilityTypeEnumId" value="FcTpWarehouse"/><order-by field-name="facilityName"/></entity-find>
+        <entity-find entity-name="mantle.order.OrderNote" list="orderNoteList">
+            <econdition field-name="orderId" operator="in" from="orderIdSet"/><order-by field-name="-noteDate"/></entity-find>
 
         <if condition="isIncoming"><then>
             <set field="anyReceived" from="false"/>
@@ -146,11 +161,14 @@ along with this software (see the LICENSE.md file). If not, see
         </then><else>
             <set field="allItemsPacked" from="true"/>
             <iterate list="shipmentItemSourceList" entry="sisCheck">
-                <if condition="sisCheck.quantityNotHandled &gt; 0"><set field="allItemsPacked" from="false"/><break/></if></iterate>
+                <if condition="sisCheck.quantityNotHandled &gt; 0.0"><set field="allItemsPacked" from="false"/><break/></if></iterate>
+            <set field="anyItemPacked" from="false"/>
+            <iterate list="shipmentItemSourceList" entry="sisCheck">
+                <if condition="sisCheck.quantityNotHandled == 0.0"><set field="anyItemPacked" from="true"/><break/></if></iterate>
 
             <set field="hasAllLabels" from="true"/><set field="hasAnyLabels" from="false"/>
             <iterate list="packageRouteSegList" entry="packageRouteSeg">
-                <if condition="packageRouteSeg.trackingCode"><then><set field="hasAnyLabels" from="true"/></then>
+                <if condition="packageRouteSeg.labelImage != null || packageRouteSeg.labelUrl"><then><set field="hasAnyLabels" from="true"/></then>
                     <else><set field="hasAllLabels" from="false"/></else></if>
             </iterate>
 
@@ -171,6 +189,20 @@ along with this software (see the LICENSE.md file). If not, see
                     <script>shippingPostalAddressList.add(0, curPaInfo)</script></if>
             </if>
         </if>
+        <!-- trim duplicates and replaced/valid from shippingPostalAddressList -->
+        <script><![CDATA[
+            Set replacedPostalIdSet = new HashSet()
+            for (int i=0; i < shippingPostalAddressList.size(); i++) {
+                String replAddressId = shippingPostalAddressList.get(i).postalContactMech?.replacesContactMechId
+                if (replAddressId) replacedPostalIdSet.add(replAddressId)
+            }
+            Set shippingPostalIdSet = new HashSet()
+            for (int i=0; i < shippingPostalAddressList.size(); ) {
+                String curAddressId = shippingPostalAddressList.get(i).postalContactMechId
+                if (shippingPostalIdSet.contains(curAddressId) || replacedPostalIdSet.contains(curAddressId)) { shippingPostalAddressList.remove(i) }
+                else { shippingPostalIdSet.add(curAddressId); i++ }
+            }
+        ]]></script>
 
         <if condition="!isIncoming">
             <!-- get shippingOptions for initial load (before drop-down dynamic call with rates which may be slow) -->
@@ -182,33 +214,36 @@ along with this software (see the LICENSE.md file). If not, see
             <entity-find-one entity-name="moqui.basic.Enumeration" value-field="curShipmentMethodEnum">
                 <field-map field-name="enumId" from="firstRouteSegment.shipmentMethodEnumId"/></entity-find-one>
         </if>
+
+        <set field="defaultNetworkPrinterId" from="ec.user.getPreference('Shipment.networkPrinterId.default')"/>
     </actions>
     <widgets>
         <container-row><row-col md="6">
-            <label text="Shipment #${shipmentId}" type="h3"/>
+            <label text="Shipment #${shipmentId}" type="h4"/>
 
             <!-- Links -->
             <section name="ShipInputSection" condition="shipment.statusId == 'ShipInput'"><widgets>
                 <section name="ShipInputInOutSection" condition="isIncoming"><widgets>
-                    <link url="scheduleShipment" text="Set Scheduled"><parameter name="shipmentId"/></link>
-                    <link url="shipShipment" text="Set Shipped"><parameter name="shipmentId"/></link>
-                    <link url="cancelShipment" text="Cancel Shipment"><parameter name="shipmentId"/></link>
+                    <link url="scheduleShipment" text="Set Scheduled"/>
+                    <link url="shipShipment" text="Set Shipped"/>
+                    <link url="cancelShipment" text="Cancel Shipment" confirmation="Really cancel shipment?"/>
                 </widgets><fail-widgets>
-                    <link url="scheduleShipment" text="Set Scheduled"><parameter name="shipmentId"/></link>
-                    <link url="pickShipment" text="Set Picked"><parameter name="shipmentId"/></link>
-                    <link url="cancelShipment" text="Cancel Shipment"><parameter name="shipmentId"/></link>
+                    <link url="scheduleShipment" text="Set Scheduled"/>
+                    <link url="pickShipment" text="Set Picked"/>
+                    <link url="cancelShipment" text="Cancel Shipment" condition="!anyItemPacked" confirmation="Really cancel shipment?"/>
                 </fail-widgets></section>
             </widgets></section>
             <section name="ShipScheduledSection" condition="shipment.statusId == 'ShipScheduled'"><widgets>
                 <section name="ShipScheduledInOutSection" condition="isIncoming"><widgets>
-                    <link url="shipShipment" text="Set Shipped"><parameter name="shipmentId"/></link>
-                    <link url="deliverShipment" text="Set Delivered" condition="anyReceived"><parameter name="shipmentId"/></link>
-                    <link url="receiveEntireShipment" text="Receive Entire Shipment"><parameter name="shipmentId"/></link>
-                    <link url="cancelShipment" text="Cancel Shipment" condition="!anyReceived"><parameter name="shipmentId"/></link>
+                    <link url="shipShipment" text="Set Shipped"/>
+                    <link url="deliverShipment" text="Set Delivered" condition="anyReceived"/>
+                    <link url="receiveEntireShipment" text="Receive Entire Shipment"/>
+                    <link url="cancelShipment" text="Cancel Shipment" confirmation="Really cancel shipment?" condition="!anyReceived">
+                        <parameter name="shipmentId"/></link>
                 </widgets><fail-widgets>
-                    <link url="pickShipment" text="Set Picked"><parameter name="shipmentId"/></link>
-                    <link url="packShipment" text="Set Packed" condition="allItemsPacked"><parameter name="shipmentId"/></link>
-                    <link url="cancelShipment" text="Cancel Shipment"><parameter name="shipmentId"/></link>
+                    <link url="pickShipment" text="Set Picked"/>
+                    <link url="packShipment" text="Set Packed" condition="allItemsPacked" style="btn-success"/>
+                    <link url="cancelShipment" text="Cancel Shipment" condition="!anyItemPacked" confirmation="Really cancel shipment?"/>
                     <link url="ShipmentPick.pdf" text="Pick PDF"/>
                     <link url="ShipmentByPackage.pdf" text="Package PDF"/>
                     <link url="ShipmentPack.pdf" text="Pack Insert PDF"/>
@@ -216,22 +251,38 @@ along with this software (see the LICENSE.md file). If not, see
             </widgets></section>
             <section name="ShipPickedSection" condition="shipment.statusId == 'ShipPicked'"><widgets>
                 <section name="ShipPickedInOuSection" condition="isIncoming"><widgets>
-                    <link url="shipShipment" text="Set Shipped"><parameter name="shipmentId"/></link>
-                    <link url="cancelShipment" text="Cancel Shipment" condition="!anyReceived"><parameter name="shipmentId"/></link>
+                    <link url="shipShipment" text="Set Shipped"/>
+                    <link url="cancelShipment" text="Cancel Shipment" confirmation="Really cancel shipment?" condition="!anyReceived">
+                        <parameter name="shipmentId"/></link>
                 </widgets><fail-widgets>
-                    <link url="packShipment" text="Set Packed" condition="allItemsPacked"><parameter name="shipmentId"/></link>
-                    <link url="cancelShipment" text="Cancel Shipment"><parameter name="shipmentId"/></link>
+                    <link url="packShipment" text="Set Packed" condition="allItemsPacked" style="btn-success"/>
+                    <link url="cancelShipment" text="Cancel Shipment" condition="!anyItemPacked" confirmation="Really cancel shipment?">
+                        <parameter name="shipmentId"/></link>
                     <link url="ShipmentPick.pdf" text="Pick PDF"/>
                 </fail-widgets></section>
                 <link url="ShipmentByPackage.pdf" text="Package PDF"/>
                 <link url="ShipmentPack.pdf" text="Pack Insert PDF"/>
             </widgets></section>
+
+            <container-dialog id="PrintLabelsDialog" button-text="Print Labels" condition="shippingGatewayConfigId &amp;&amp; hasAnyLabels">
+                <form-single name="PrintAllShipmentLabels" transition="printShipmentLabels">
+                    <field name="shipmentId"><default-field><hidden/></default-field></field>
+                    <field name="networkPrinterId" from="defaultNetworkPrinterId"><default-field title="Printer"><drop-down>
+                        <entity-options key="${networkPrinterId}" text="${description ?: printerName} (${serverHost})">
+                            <entity-find entity-name="moqui.basic.print.NetworkPrinter">
+                                <order-by field-name="description,printerName"/></entity-find></entity-options>
+                    </drop-down></default-field></field>
+                    <field name="makeDefaultPrinter"><default-field title="Make Default"><check><option key="true" text=" "/></check></default-field></field>
+                    <field name="submitButton"><default-field title="Submit"><submit/></default-field></field>
+                </form-single>
+            </container-dialog>
             <section name="ShipPackedSection" condition="shipment.statusId == 'ShipPacked'"><widgets>
                 <section name="ShipPackedInOutSection" condition="isIncoming"><widgets>
                     <link url="shipShipment" text="Set Shipped"><parameter name="shipmentId"/></link>
                     <link url="deliverShipment" text="Set Delivered" condition="anyReceived"><parameter name="shipmentId"/></link>
                     <link url="receiveEntireShipment" text="Receive Entire Shipment"><parameter name="shipmentId"/></link>
-                    <link url="cancelShipment" text="Cancel Shipment" condition="!anyReceived"><parameter name="shipmentId"/></link>
+                    <link url="cancelShipment" text="Cancel Shipment" confirmation="Really cancel shipment?" condition="!anyReceived">
+                        <parameter name="shipmentId"/></link>
                 </widgets><fail-widgets>
                     <link url="requestShipmentLabels" text="Get Labels" condition="shippingGatewayConfigId &amp;&amp; !hasAllLabels"/>
                     <link url="trackShipmentLabels" text="Track Labels" condition="shippingGatewayConfigId &amp;&amp; hasAnyLabels"/>
@@ -246,7 +297,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <section name="ShipShippedInOutSection" condition="isIncoming"><widgets>
                     <link url="deliverShipment" text="Set Delivered" condition="anyReceived"><parameter name="shipmentId"/></link>
                     <link url="receiveEntireShipment" text="Receive Entire Shipment" ><parameter name="shipmentId"/></link>
-                    <link url="cancelShipment" text="Cancel Shipment" condition="!anyReceived"><parameter name="shipmentId"/></link>
+                    <link url="cancelShipment" text="Cancel Shipment" confirmation="Really cancel shipment?" condition="!anyReceived">
+                        <parameter name="shipmentId"/></link>
                 </widgets><fail-widgets>
                     <link url="requestShipmentLabels" text="Get Labels" condition="shippingGatewayConfigId &amp;&amp; !hasAllLabels"/>
                     <link url="trackShipmentLabels" text="Track Labels" condition="shippingGatewayConfigId &amp;&amp; hasAnyLabels"/>
@@ -258,11 +310,11 @@ along with this software (see the LICENSE.md file). If not, see
             </widgets></section>
 
             <section-iterate name="OrderLinks" list="orderIdSet" entry="orderId"><widgets>
-                <link url="orderDetail" text="Order #${orderId}" link-type="anchor-button"/></widgets></section-iterate>
+                <link url="orderDetail" text="Order ${orderId}" link-type="anchor-button"/></widgets></section-iterate>
             <section-iterate name="InvoiceLinks" list="invoiceIdSet" entry="invoiceId"><widgets>
-                <link url="editInvoice" text="Invoice #${invoiceId}" link-type="anchor-button"/></widgets></section-iterate>
+                <link url="editInvoice" text="Invoice ${invoiceId}" link-type="anchor-button"/></widgets></section-iterate>
             <section-iterate name="AcctgTransLinks" list="acctgTransIdSet" entry="acctgTransId"><widgets>
-                <link url="editTransaction" text="TX #${acctgTransId}" link-type="anchor-button"/>
+                <link url="editTransaction" text="TX ${acctgTransId}" link-type="anchor-button"/>
             </widgets></section-iterate>
 
             <label text="Shipping Gateway: ${shippingGatewayConfig.description}" type="p" condition="shippingGatewayConfig != null"/>
@@ -270,8 +322,8 @@ along with this software (see the LICENSE.md file). If not, see
             <!-- Header -->
             <section name="ShipmentHeaderSection" condition="allowUpdate || shipment.statusId == 'ShipPacked'"><widgets>
                 <section name="DestPostalAddressSection" condition="!isIncoming"><widgets>
-                    <dynamic-dialog id="AddPostalInfo" button-text="Add Shipping Address" transition="UpdateContactInfo" width="800"
-                            parameter-map="[partyId:toPartyId, postalContactMechPurposeId:'PostalShippingDest', shipmentId:shipmentId]"/>
+                    <container><dynamic-dialog id="AddPostalInfo" button-text="Add Shipping Address" transition="UpdateContactInfo" width="800"
+                            parameter-map="[partyId:toPartyId, postalContactMechPurposeId:'PostalShippingDest', shipmentId:shipmentId]"/></container>
                     <label text="No shipping address selected" style="text-danger" type="p" condition="!firstRouteSegment.destPostalContactMechId"/>
                     <container style="float-box" type="ul">
                         <section-iterate name="ShippingAddressList" list="shippingPostalAddressList" entry="contactInfo"><actions>
@@ -298,8 +350,8 @@ along with this software (see the LICENSE.md file). If not, see
                         </widgets></section-iterate>
                     </container>
                     <label text="No shipment method selected" style="text-warning" type="p" condition="!firstRouteSegment.shipmentMethodEnumId"/>
+                    <label text="&amp;nbsp;" type="p" encode="false"/>
                 </widgets></section>
-
                 <form-single name="EditShipment" transition="updateShipment" map="shipment">
                     <field name="shipmentId"><default-field><hidden/></default-field></field>
                     <field name="destPostalContactMechId"><default-field><hidden/></default-field></field>
@@ -307,7 +359,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <field name="carrierAndShipmentMethod"><conditional-field title="Shipment Method" condition="!hasAllLabels">
                         <drop-down allow-empty="true" no-current-selected-key="${firstRouteSegment.carrierPartyId ? firstRouteSegment.carrierPartyId + ':' + firstRouteSegment.shipmentMethodEnumId : ''}">
                             <list-options list="shippingOptions" key="${carrierPartyId}:${shipmentMethodEnumId}"
-                                    text="${carrierPartyId != '_NA_' ? (carrierName + ' - ') : ''}${shipmentMethodDescription}${shippingTotal != null ? ' ' + ec.l10n.formatCurrency(shippingTotal, orderHeader.currencyUomId) : ''}"/>
+                                    text="${description ? description : (carrierPartyId != '_NA_' ? (carrierName + ' - ') : '') + shipmentMethodDescription}${shippingTotal != null ? ' ' + ec.l10n.formatCurrency(shippingTotal, orderHeader.currencyUomId) : ''}"/>
                             <dynamic-options transition="getShippingOptions"/>
                         </drop-down>
                     </conditional-field></field>
@@ -320,16 +372,22 @@ along with this software (see the LICENSE.md file). If not, see
                     <!-- Incoming Shipment Fields -->
                     <field name="fromPartyId"><conditional-field title="From Party" condition="isIncoming">
                         <drop-down allow-empty="true"><dynamic-options transition="searchPartyList" server-search="true" min-length="2"/></drop-down>
+                        <link url="editSupplier" entity-name="mantle.party.PartyDetail" text="PartyNameTemplate" link-type="anchor"
+                                condition="fromPartyId" parameter-map="[partyId:fromPartyId]"/>
                     </conditional-field></field>
                     <field name="destinationFacilityId" from="lastRouteSegment.destinationFacilityId">
                         <conditional-field title="Destination Facility" condition="isIncoming">
                             <drop-down><list-options list="facilityList" key="${facilityId}" text="FacilityNameTemplate"/></drop-down>
+                            <link url="editFacility" text="${ec.resource.expand('FacilityNameTemplate', '', destinationFacility)}" link-type="anchor"
+                                    parameter-map="[facilityId:destinationFacilityId]"/>
                         </conditional-field>
                     </field>
 
                     <!-- Outgoing Shipment Fields -->
                     <field name="toPartyId"><conditional-field title="To Party" condition="!isIncoming &amp;&amp; allowUpdate">
                         <drop-down allow-empty="true"><dynamic-options transition="searchPartyList" server-search="true" min-length="2"/></drop-down>
+                        <link url="editCustomer" entity-name="mantle.party.PartyDetail" text="PartyNameTemplate" link-type="anchor"
+                                condition="toPartyId" parameter-map="[partyId:toPartyId]"/>
                     </conditional-field><conditional-field condition="!isIncoming" title="To Party">
                         <label text="${toPartyDetail ? ec.resource.expand('PartyNameTemplate', '', toPartyDetail) : 'Not Set'}"/>
                     </conditional-field></field>
@@ -338,11 +396,14 @@ along with this software (see the LICENSE.md file). If not, see
                             <drop-down><list-options list="facilityList" key="${facilityId}" text="FacilityNameTemplate"/></drop-down>
                         </conditional-field>
                         <conditional-field title="Origin Facility" condition="!isIncoming">
-                            <label text="${ec.resource.expand('FacilityNameTemplate', '', originFacility)}"/>
+                            <link url="editFacility" text="${ec.resource.expand('FacilityNameTemplate', '', originFacility)}" link-type="anchor"
+                                    parameter-map="[facilityId:originFacilityId]"/>
                         </conditional-field>
                     </field>
                     <field name="estimatedReadyDate"><conditional-field condition="!isIncoming"><date-time/></conditional-field></field>
                     <field name="estimatedArrivalDate"><default-field><date-time/></default-field></field>
+                    <field name="handlingInstructions"><default-field title="Shipping Instructions">
+                        <text-area rows="3" cols="60"/></default-field></field>
 
                     <field name="submitButton"><default-field title="Update Shipment"><submit/></default-field></field>
 
@@ -372,6 +433,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <label text="Status ${statusItem.description}" type="p"/>
                     <label text="Estimated ready: ${ec.l10n.format(shipment.estimatedReadyDate, 'yyyy-MM-dd HH:mm') ?: 'Not Set'}" type="p"/>
                     <label text="Ship by ${curCarrierDetail ? ec.resource.expand('PartyNameTemplate','',curCarrierDetail) : 'N/A'} - ${shipmentMethodEnum?.description ?: 'None'}" type="p"/>
+                    <label text="Shipping Instructions: ${shipment.handlingInstructions}" type="p" condition="shipment.handlingInstructions"/>
                     <section name="ShippedShippingInfo" condition="curPaInfo"><actions><set field="contactInfo" from="curPaInfo"/></actions><widgets>
                         <render-mode><text type="html,vuet" location="component://SimpleScreens/template/party/ContactInfo.html.gstring"/></render-mode>
                         <container><label text="Trust: ${contactInfo.postalTrustLevelEnum?.description ?: 'New'}" type="strong"/></container>
@@ -381,6 +443,18 @@ along with this software (see the LICENSE.md file). If not, see
             </fail-widgets></section>
         </row-col><row-col md="6">
             <section-include name="StatusHistorySection" location="component://SimpleScreens/template/basic/StatusWidgets.xml"/>
+
+            <section name="OrderNotesSection"><widgets>
+                <container-box><box-header><label text="Order Notes" type="h5"/></box-header><box-body>
+                    <section-iterate name="NoteIterateSection" list="orderNoteList" entry="note"><actions>
+                        <entity-find-one entity-name="mantle.party.PersonWithUserAccount" value-field="paua">
+                            <field-map field-name="userId" from="note.userId"/></entity-find-one>
+                    </actions><widgets>
+                        <label text="By ${paua?.firstName?:''} ${paua?.lastName?:''} (${paua?.username ?: note.userId}) at ${ec.l10n.format(note.noteDate, 'yyyy-MM-dd HH:mm')}" type="strong"/>
+                        <label text="${note.noteText}" type="p"/>
+                    </widgets></section-iterate>
+                </box-body></container-box>
+            </widgets></section>
 
             <container-box><box-header><label text="Payments" type="h5"/></box-header><box-body-nopad>
                 <form-list name="ShipmentOrderPaymentList" list="shipmentPaymentList">
@@ -485,6 +559,10 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="receivedDate"><default-field><display/></default-field></field>
                         <field name="emailTypeEnumId"><default-field title="Email Type">
                             <display-entity entity-name="moqui.basic.Enumeration"/></default-field></field>
+                        <field name="sendLink"><default-field title=""><link url="sendEmailMessage" text="Send"
+                                parameter-map="[emailMessageId:emailMessageId]" condition="!(statusId in ['ES_DRAFT', 'ES_CANCELLED'])"
+                                confirmation="Send this email message?"/>
+                        </default-field></field>
                     </form-list>
                 </box-body></container-box>
             </widgets></section>
@@ -544,7 +622,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <default-field><text-line size="8"/></default-field></field>
                                 <field name="assetId"><default-field title="Asset">
                                     <drop-down><dynamic-options transition="getAssetList" server-search="true" min-length="0"
-                                            parameter-map="[facilityId:firstRouteSegment.originFacilityId, productId:productId, assetTypeEnumId:null]"/></drop-down>
+                                            parameter-map="[facilityId:firstRouteSegment.originFacilityId, productId:productId, assetTypeEnumId:null, excludeZeroQoh:'true']"/></drop-down>
                                 </default-field></field>
                                 <field name="submitButton"><default-field title="Pack Quantity"><submit/></default-field></field>
                             </form-single>
@@ -620,7 +698,6 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="quantityRejected" align="right"><default-field title="Rejected"><display/></default-field></field>
 
                             <field name="assetId"><default-field title="Asset"><link url="assetDetail" text="${assetId}" link-type="anchor"/></default-field></field>
-                            <!-- TODO: add lotId with link to lot detail -->
 
                             <field name="orderId"><default-field title="Order"><link url="orderDetail" text="${orderId}" link-type="anchor"/></default-field></field>
                             <field name="orderItemSeqId"><default-field title="Item"><display/></default-field></field>
@@ -658,6 +735,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <row-actions>
                                 <entity-find entity-name="mantle.product.issuance.AssetReservation" list="existingResList">
                                     <econdition field-name="orderId"/><econdition field-name="orderItemSeqId"/></entity-find>
+                                <set field="resPackForm" from="allowPack &amp;&amp; quantityNotHandled &gt; 0.0 &amp;&amp; existingResList"/>
                             </row-actions>
                             <field name="shipmentId"><default-field><hidden/></default-field></field>
                             <field name="shipmentItemSourceId"><default-field><hidden/></default-field></field>
@@ -667,37 +745,43 @@ along with this software (see the LICENSE.md file). If not, see
 
                             <field name="quantitySis" from="quantity">
                                 <default-field title="Quantity"><display/></default-field></field>
-                            <field name="quantityNotHandled"><default-field><display/></default-field></field>
+                            <field name="quantityNotHandled"><default-field title="Not Issued"><display/></default-field></field>
 
-                            <field name="invoiceId"><default-field title="Invoice">
-                                <link url="editInvoice" text="${invoiceId?:''}" link-type="anchor"/></default-field></field>
-                            <field name="invoiceItemSeqId"><default-field title="Item"><display/></default-field></field>
+                            <field name="invoiceId"><default-field title="Invoice Item">
+                                <link url="editInvoice" text="${invoiceId?:''}:${invoiceItemSeqId?:''}" link-type="anchor"/></default-field></field>
 
                             <field name="assetReservations">
                                 <conditional-field condition="existingResList">
-                                    <section-iterate name="ReservationInfoSection" list="existingResList" entry="existingRes"><widgets><container>
-                                        <label text="Res: ${ec.l10n.format(existingRes.quantity, null)}, Not Avail: ${ec.l10n.format(existingRes.quantityNotAvailable, null)}, Not Issued: ${ec.l10n.format(existingRes.quantityNotIssued, null)}" type="span"/>
-                                        <link url="assetDetail" text="Asset ${existingRes.assetId}" parameter-map="[assetId:existingRes.assetId]" link-type="anchor"/>
-                                    </container></widgets></section-iterate>
+                                    <section-iterate name="ReservationInfoSection" list="existingResList" entry="existingRes"><actions>
+                                        <entity-find-one entity-name="mantle.product.asset.AssetLotAndMfgParty" value-field="assetLot">
+                                            <field-map field-name="assetId" from="existingRes.assetId"/></entity-find-one>
+                                    </actions><widgets>
+                                        <container>
+                                            <label text="Res: ${ec.l10n.format(existingRes.quantity, null)}, Not Avail: ${ec.l10n.format(existingRes.quantityNotAvailable, null)}, Not Issued: ${ec.l10n.format(existingRes.quantityNotIssued, null)}" type="span"/>
+                                            <link url="assetDetail" text="Asset ${existingRes.assetId}" parameter-map="[assetId:existingRes.assetId]" link-type="anchor"/>
+                                        </container>
+                                        <label text="LotNameTemplate" text-map="assetLot" condition="assetLot?.lotId"/>
+                                    </widgets></section-iterate>
                                 </conditional-field>
                                 <default-field><display text=" "/></default-field>
                             </field>
+                            <field name="reserveItem"><default-field title="">
+                                <dynamic-dialog id="ItemReserveDialog" button-text="Reserve" transition="ItemReserve" condition="quantityNotHandled &gt; 0.0"/>
+                            </default-field></field>
 
-                            <field name="shipmentPackageSeqId">
-                                <conditional-field condition="allowPack &amp;&amp; quantityNotHandled &gt; 0" title="Package"><drop-down>
-                                    <option key="" text="New Package"/>
+                            <field name="shipmentPackageSeqId" from="shipmentPackageList ? shipmentPackageList[0].shipmentPackageSeqId : null">
+                                <conditional-field condition="resPackForm" title="Package"><drop-down>
+                                    <option key="" text="New"/>
                                     <list-options list="shipmentPackageList" key="${shipmentPackageSeqId}" text="${shipmentPackageSeqId}"/>
                                 </drop-down></conditional-field>
                                 <default-field title="Package"><display text=" "/></default-field>
                             </field>
                             <field name="quantity" from="quantityNotHandled">
-                                <conditional-field condition="allowPack &amp;&amp; quantityNotHandled &gt; 0" title="Pack Quantity">
-                                    <text-line size="6"/></conditional-field>
+                                <conditional-field condition="resPackForm" title="Pack Quantity"><text-line size="6"/></conditional-field>
                                 <default-field title="Pack Quantity"><display text=" "/></default-field>
                             </field>
                             <field name="packButton">
-                                <conditional-field condition="allowPack &amp;&amp; quantityNotHandled &gt; 0" title="Pack">
-                                    <submit/></conditional-field>
+                                <conditional-field condition="resPackForm" title="Issue &amp; Pack"><submit/></conditional-field>
                                 <default-field title=""><display text=" "/></default-field>
                             </field>
                         </form-list>
@@ -731,6 +815,11 @@ along with this software (see the LICENSE.md file). If not, see
                                 <display text="FacilityLocationNameTemplate" text-map="facLoc?:[:]"/></default-field></field>
                             <field name="lotId"><default-field title="Lot">
                                 <display-entity entity-name="mantle.product.asset.LotAndMfgParty" text="LotNameTemplate"/></default-field></field>
+                            <field name="unpackLink"><default-field title=""><link url="unpackItemIssuance" text="Unpack"
+                                    parameter-map="[shipmentId:shipmentId, assetIssuanceId:assetIssuanceId]"
+                                    condition="!invoiceId &amp;&amp; quantity"
+                                    confirmation="Are you sure? Only do this when necessary to avoid processing a return to receive the item back into inventory."/>
+                            </default-field></field>
                         </form-list>
                     </fail-widgets></section>
                 </box-body-nopad></container-box>
@@ -783,11 +872,6 @@ along with this software (see the LICENSE.md file). If not, see
                             </form-single>
                         </container-dialog>
 
-                        <link url="trackShipmentLabels" text="Track" condition="shippingGatewayConfigId &amp;&amp; packageRouteSeg?.gatewayLabelId"
-                                parameter-map="[shipmentId:shipmentId, shipmentPackageSeqId:shipmentPackage.shipmentPackageSeqId,
-                                    shipmentRouteSegmentSeqId:packageRouteSeg.shipmentRouteSegmentSeqId]"/>
-                        <link url="${packageRouteSeg.trackingUrl}" text="Carrier Track" url-type="plain" target-window="_blank" condition="packageRouteSeg?.trackingUrl"/>
-                        <link url="${packageRouteSeg.labelUrl}" text="Download/Print Label" url-type="plain" target-window="_blank" condition="packageRouteSeg?.labelUrl"/>
                         <link url="refundShipmentLabels" text="Refund Label"
                                 confirmation="Request refund? If package has not yet shipped a refund will be processed and label will not be valid for shipping."
                                 condition="shippingGatewayConfigId &amp;&amp; packageRouteSeg?.gatewayLabelId &amp;&amp; !packageRouteSeg?.gatewayRefundId"
@@ -798,6 +882,29 @@ along with this software (see the LICENSE.md file). If not, see
                                 condition="shippingGatewayConfigId &amp;&amp; packageRouteSeg?.gatewayLabelId"
                                 parameter-map="[shipmentId:shipmentId, shipmentPackageSeqId:shipmentPackage.shipmentPackageSeqId,
                                     shipmentRouteSegmentSeqId:packageRouteSeg.shipmentRouteSegmentSeqId]"/>
+                        <link url="deletePackage" text="Delete Package" condition="!shipmentPackageContentList"
+                                confirmation="Delete package ${shipmentPackage.shipmentPackageSeqId}?"
+                                parameter-map="[shipmentId:shipmentId, shipmentPackageSeqId:shipmentPackage.shipmentPackageSeqId]"/>
+
+                        <link url="trackShipmentLabels" text="Track" condition="shippingGatewayConfigId &amp;&amp; packageRouteSeg?.gatewayLabelId"
+                                parameter-map="[shipmentId:shipmentId, shipmentPackageSeqId:shipmentPackage.shipmentPackageSeqId,
+                                    shipmentRouteSegmentSeqId:packageRouteSeg.shipmentRouteSegmentSeqId]"/>
+                        <link url="${packageRouteSeg.trackingUrl}" text="Carrier Track" url-type="plain" target-window="_blank" condition="packageRouteSeg?.trackingUrl"/>
+                        <link url="${packageRouteSeg.labelUrl}" text="Download Label" url-type="plain" target-window="_blank" condition="packageRouteSeg?.labelUrl"/>
+                        <container-dialog id="PrintLabelDialog" button-text="Print Label" condition="packageRouteSeg?.labelUrl || packageRouteSeg?.labelImage != null">
+                            <form-single name="PrintShipmentLabel" transition="printShipmentLabels">
+                                <field name="shipmentId"><default-field><hidden/></default-field></field>
+                                <field name="shipmentPackageSeqId"><default-field><hidden/></default-field></field>
+                                <field name="shipmentRouteSegmentSeqId"><default-field><hidden/></default-field></field>
+                                <field name="networkPrinterId" from="defaultNetworkPrinterId"><default-field title="Printer"><drop-down>
+                                    <entity-options key="${networkPrinterId}" text="${description ?: printerName} (${serverHost})">
+                                        <entity-find entity-name="moqui.basic.print.NetworkPrinter">
+                                            <order-by field-name="description,printerName"/></entity-find></entity-options>
+                                </drop-down></default-field></field>
+                                <field name="makeDefaultPrinter"><default-field title="Make Default"><check><option key="true" text=" "/></check></default-field></field>
+                                <field name="submitButton"><default-field title="Print"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
                     </box-toolbar><box-body>
                         <container-row>
                             <row-col sm="1"><label text="Status" type="strong"/></row-col>

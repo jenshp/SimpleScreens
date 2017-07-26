@@ -19,6 +19,11 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="createOrder"><service-call name="mantle.order.OrderServices.create#Order"/>
         <default-response url="../OrderDetail"/></transition>
 
+    <transition name="editFacility"><default-response url="//${appRoot}/Facility/EditFacility"/></transition>
+    <transition name="editParty"><default-response url="//${appRoot}/Party/EditParty"/></transition>
+    <transition name="editSupplier"><default-response url="//${appRoot}/Supplier/EditSupplier"/></transition>
+    <transition name="editCustomer"><default-response url="//${appRoot}/Customer/EditCustomer"/></transition>
+
     <transition-include name="searchPartyList" location="component://SimpleScreens/template/party/PartyForms.xml"/>
     <transition-include name="getProductList" location="component://SimpleScreens/template/product/ProductTransitions.xml"/>
 
@@ -64,17 +69,9 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <container-dialog id="CreatePurchaseOrderDialog" button-text="Create Purchase Order">
             <form-single name="CreatePurchaseOrder" transition="createOrder">
-                <field name="vendorPartyId"><default-field title="Vendor">
-                    <drop-down>
-                        <entity-options key="${partyId}" text="PartyNameTemplate">
-                            <entity-find entity-name="mantle.party.PartyDetailAndRole">
-                                <econdition field-name="roleTypeId" operator="in" from="vendorRole"/>
-                                <econdition field-name="disabled" value="N" or-null="true"/>
-                                <order-by field-name="organizationName"/><order-by field-name="firstName"/>
-                            </entity-find>
-                        </entity-options>
-                    </drop-down>
-                </default-field></field>
+                <field name="vendorPartyId"><default-field title="Supplier"><drop-down allow-empty="true">
+                    <dynamic-options transition="searchPartyList" server-search="true" min-length="2" parameter-map="[roleTypeId:vendorRole]"/>
+                </drop-down></default-field></field>
                 <field name="customerPartyId"><default-field title="Customer">
                     <drop-down>
                         <entity-options key="${partyId}" text="PartyNameTemplate">
@@ -112,21 +109,22 @@ along with this software (see the LICENSE.md file). If not, see
                     <drop-down><dynamic-options transition="getWhFacilitiesByOwner" value-field="facilityId" label-field="label" depends-optional="true">
                         <depends-on field="vendorPartyId"/><depends-on field="productStoreId"/></dynamic-options></drop-down>
                 </default-field></field>
-                <field name="customerPartyId"><default-field title="Customer">
-                    <drop-down allow-empty="true"><dynamic-options transition="searchPartyList" server-search="true" min-length="2" parameter-map="[roleTypeId:'Customer']"/></drop-down>
-                </default-field></field>
+                <field name="customerPartyId"><default-field title="Customer"><drop-down allow-empty="true">
+                    <dynamic-options transition="searchPartyList" server-search="true" min-length="2" parameter-map="[roleTypeId:'Customer']"/>
+                </drop-down></default-field></field>
                 <field name="shipBeforeDate"><default-field><date-time/></default-field></field>
                 <field name="estimatedDeliveryDate"><default-field title="Delivery Date"><date-time/></default-field></field>
                 <field name="submitButton"><default-field title="Create"><submit/></default-field></field>
             </form-single>
         </container-dialog>
 
-        <form-list name="OrderList" list="orderList" header-dialog="true" select-columns="true" saved-finds="true" show-csv-button="true">
+        <form-list name="OrderList" list="orderList" skip-form="true" header-dialog="true" select-columns="true" saved-finds="true"
+                show-csv-button="true" show-all-button="true">
             <entity-find entity-name="mantle.order.OrderPartFindView" list="orderList">
                 <search-form-inputs default-order-by="-entryDate,-orderId,orderPartSeqId"
                         skip-fields="vendorRoleTypeId,customerRoleTypeId,customerClassificationId">
                     <default-parameters statusId="OrderOpen,OrderPlaced,OrderApproved" statusId_op="in"
-                            entryDate_poffset="-1" entryDate_period="30d"/></search-form-inputs>
+                            entryDate_poffset="-1" entryDate_period="30d" orderType="Any"/></search-form-inputs>
                 <date-filter from-field-name="customerClassFromDate" thru-field-name="customerClassThruDate"/>
                 <econdition field-name="vendorRoleTypeId" ignore-if-empty="true"/>
                 <econdition field-name="customerRoleTypeId" ignore-if-empty="true"/>
@@ -143,8 +141,13 @@ along with this software (see the LICENSE.md file). If not, see
                 <set field="custPcaa" from="custPcaaList ? custPcaaList[0] : null"/>
             </row-actions>
 
-            <field name="orderId"><header-field show-order-by="true"><text-find size="8" hide-options="true"/></header-field>
-                <default-field><link text="${orderId}:${orderPartSeqId}" url="orderDetail" link-type="anchor"/></default-field></field>
+            <field name="orderType"><header-field><radio no-current-selected-key="Any">
+                <option key="Any"/><option key="Sales"/><option key="Purchase"/></radio></header-field></field>
+
+            <field name="orderId"><header-field title="Order" show-order-by="true"><text-find size="20" hide-options="true"/></header-field>
+                <default-field><link text="${orderId}:${orderPartSeqId}" url="orderDetail" link-type="anchor" condition="orderId"/></default-field></field>
+            <field name="otherPartyOrderId"><header-field title="Their Order" show-order-by="true"><text-find size="20" hide-options="true"/></header-field>
+                <default-field><display/></default-field></field>
             <field name="entryDate"><header-field show-order-by="true"><date-period/></header-field>
                 <default-field><display/></default-field></field>
             <field name="placedDate"><header-field show-order-by="true"><date-period/></header-field>
@@ -170,7 +173,7 @@ along with this software (see the LICENSE.md file). If not, see
                     </entity-options>
                 </drop-down>
             </header-field><default-field>
-                <display-entity entity-name="mantle.facility.Facility" text="FacilityNameTemplate"/>
+                <link url="editFacility" entity-name="mantle.facility.Facility" text="FacilityNameTemplate" link-type="anchor"/>
             </default-field></field>
             <field name="productStoreId">
                 <header-field title="Store" show-order-by="true">
@@ -185,25 +188,19 @@ along with this software (see the LICENSE.md file). If not, see
 
             <field name="vendorPartyId">
                 <header-field title="Vendor" show-order-by="true">
-                    <drop-down allow-empty="true">
-                        <entity-options key="${partyId}" text="PartyNameTemplate">
-                            <entity-find entity-name="mantle.party.PartyDetailAndRole">
-                                <econdition field-name="roleTypeId" operator="in" from="vendorRole"/>
-                                <econdition field-name="disabled" value="N" or-null="true"/>
-                                <order-by field-name="organizationName"/><order-by field-name="firstName"/>
-                            </entity-find>
-                        </entity-options>
-                    </drop-down>
+                    <drop-down allow-empty="true"><dynamic-options transition="searchPartyList" server-search="true" min-length="0"
+                            parameter-map="[roleTypeId:'Supplier,Vendor,OrgInternal']"/></drop-down>
                 </header-field>
-                <!-- TODO: if has Supplier role link to EditSupplier, if has Vendor role link to EditVendor; or link to EditParty... -->
-                <default-field><display-entity entity-name="mantle.party.PartyDetail" text="PartyNameTemplate"/></default-field>
+                <default-field><link url="editSupplier" entity-name="mantle.party.PartyDetail" text="PartyNameTemplate"
+                        link-type="anchor" parameter-map="[partyId:vendorPartyId]"/></default-field>
             </field>
             <field name="customerPartyId">
                 <header-field title="Customer" show-order-by="true">
                     <drop-down allow-empty="true"><dynamic-options transition="searchPartyList" server-search="true" min-length="2"
-                            parameter-map="[roleTypeId:'Customer']"/></drop-down>
+                            parameter-map="[roleTypeId:'Customer,OrgInternal']"/></drop-down>
                 </header-field>
-                <default-field><display-entity entity-name="mantle.party.PartyDetail" text="PartyNameTemplate"/></default-field>
+                <default-field><link url="editCustomer" entity-name="mantle.party.PartyDetail" text="PartyNameTemplate"
+                        link-type="anchor" parameter-map="[partyId:customerPartyId]"/></default-field>
             </field>
             <field name="customerClassificationId"><header-field title="Customer Class">
                 <drop-down allow-empty="true">
@@ -216,7 +213,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <display text="${custPcaa?.description ?: ''}"/>
             </default-field></field>
 
-            <field name="partTotal"><header-field show-order-by="true" title="Total"/>
+            <field name="partTotal" align="right" show-total="sum"><header-field show-order-by="true" title="Total"/>
                 <default-field><display currency-unit-field="currencyUomId"/></default-field></field>
 
             <field name="purchaseItemTypeEnumId"><header-field title="Purchase Item Type">
@@ -238,11 +235,9 @@ along with this software (see the LICENSE.md file). If not, see
             <field name="findProductId"><header-field title="Product">
                 <drop-down allow-empty="true"><dynamic-options transition="getProductList" server-search="true" min-length="0"/></drop-down>
             </header-field></field>
-            <field name="orderType"><header-field><radio><option key="" text="Any"/><option key="Sales"/><option key="Purchase"/></radio></header-field>
-                <default-field><display/></default-field></field>
             <field name="submitButton"><header-field title="Find"><submit/></header-field></field>
 
-            <form-list-column><field-ref name="orderId"/></form-list-column>
+            <form-list-column><field-ref name="orderId"/><field-ref name="otherPartyOrderId"/></form-list-column>
             <form-list-column><field-ref name="entryDate"/><field-ref name="placedDate"/>
                 <field-ref name="shipBeforeDate"/></form-list-column>
             <form-list-column><field-ref name="statusId"/><field-ref name="facilityId"/>

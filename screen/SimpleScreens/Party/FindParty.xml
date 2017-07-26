@@ -71,9 +71,6 @@ along with this software (see the LICENSE.md file). If not, see
                 <field name="areaCode"><default-field><text-line size="5"/></default-field></field>
                 <field name="contactNumber"><default-field><text-line size="10"/></default-field></field>
 
-                <field name="contactOwnerPartyId"><default-field title="Contact Owner">
-                    <text-line ac-transition="searchPartyList" ac-min-length="2" size="40" parameter-map="[roleTypeId:null]"/></default-field></field>
-
                 <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
             </form-single>
         </container-dialog>
@@ -92,7 +89,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <entity-find entity-name="mantle.party.RoleType"><order-by field-name="description"/></entity-find>
                     </entity-options></drop-down>
                 </default-field></field>
-                <field name="accountPartyId"><default-field title="Account">
+                <field name="accountPartyId"><default-field title="Sales Account">
                     <drop-down allow-empty="true">
                         <entity-options key="${partyId}" text="PartyNameTemplate">
                             <entity-find entity-name="mantle.party.PartyDetailAndRole">
@@ -124,17 +121,15 @@ along with this software (see the LICENSE.md file). If not, see
                 </default-field></field>
                 <field name="cardNumber"><default-field title=""><text-line size="16"/></default-field></field>
                 <field name="expireMonth">
-                    <default-field title=""><drop-down current="selected">
+                    <default-field title=""><drop-down current="selected" no-current-selected-key="${ec.l10n.format(ec.user.nowTimestamp, 'MM')}">
                         <option key="01"/><option key="02"/><option key="03"/><option key="04"/><option key="05"/>
                         <option key="06"/><option key="07"/><option key="08"/><option key="09"/><option key="10"/>
                         <option key="11"/><option key="12"/>
                     </drop-down></default-field>
                 </field>
                 <field name="expireYear">
-                    <default-field title=""><drop-down current="selected">
-                        <option key="2017"/><option key="2018"/><option key="2019"/><option key="2020"/><option key="2021"/>
-                        <option key="2022"/><option key="2023"/><option key="2024"/><option key="2025"/><option key="2026"/>
-                    </drop-down></default-field>
+                    <default-field title=""><drop-down current="selected" no-current-selected-key="${ec.l10n.format(ec.user.nowTimestamp, 'yyyy')}">
+                        <list-options list="org.moqui.util.StringUtilities.getYearList(10)"/></drop-down></default-field>
                 </field>
 
                 <field name="address1"><default-field title="Address 1"><text-line size="30"/></default-field></field>
@@ -235,7 +230,10 @@ along with this software (see the LICENSE.md file). If not, see
                 <header-field title="Name" show-order-by="case-insensitive"><text-find size="20" hide-options="true"/></header-field>
                 <default-field><link url="editParty" text="PartyNameOnlyTemplate" text-map="party" link-type="anchor"/></default-field>
             </field>
-            <field name="username"><default-field><display text="${userAccount?.username?:''}"/></default-field></field>
+            <field name="username">
+                <header-field><text-find size="10" hide-options="true"/></header-field>
+                <default-field><display text="${userAccount?.username?:''}"/></default-field>
+            </field>
             <field name="disabled" from="party.disabled">
                 <header-field><drop-down allow-empty="true"><option key="Y"/><option key="N"/></drop-down></header-field>
                 <default-field><display/></default-field>

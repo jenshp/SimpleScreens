@@ -14,6 +14,11 @@ along with this software (see the LICENSE.md file). If not, see
 <#-- See the mantle.ledger.LedgerReportServices.run#BalanceSheet service for data preparation -->
 
 <#assign showDetail = (detail! == "true")>
+<#assign showDiff = (timePeriodIdList?size == 2)>
+<#assign showCharts = (charts! == "true")>
+<#assign backgroundColors = ['rgba(92, 184, 92, 0.5)','rgba(91, 192, 222, 0.5)','rgba(240, 173, 78, 0.5)','rgba(217, 83, 79, 0.5)',
+'rgba(60, 118, 61, 0.5)','rgba(49, 112, 143, 0.5)','rgba(138, 109, 59, 0.5)','rgba(169, 68, 66, 0.5)',
+'rgba(223, 240, 216, 0.6)','rgba(217, 237, 247, 0.6)','rgba(252, 248, 227, 0.6)','rgba(242, 222, 222, 0.6)']>
 
 <#macro showClass classInfo depth>
     <#-- skip classes with nothing posted -->
@@ -27,6 +32,9 @@ along with this software (see the LICENSE.md file). If not, see
         <#list timePeriodIdList as timePeriodId>
             <td class="text-right">${ec.l10n.formatCurrency(classInfo.postedNoClosingByTimePeriod[timePeriodId]!0, currencyUomId)}</td>
         </#list>
+        <#if showDiff>
+            <td class="text-right">${ec.l10n.formatCurrency((classInfo.postedNoClosingByTimePeriod[timePeriodIdList[1]]!0) - (classInfo.postedNoClosingByTimePeriod[timePeriodIdList[0]]!0), currencyUomId)}</td>
+        </#if>
     </tr>
     <#list classInfo.glAccountInfoList! as glAccountInfo>
         <#if showDetail>
@@ -45,6 +53,9 @@ along with this software (see the LICENSE.md file). If not, see
                         </#if>
                     </td>
                 </#list>
+                <#if showDiff>
+                    <td class="text-right">${ec.l10n.formatCurrency((glAccountInfo.postedNoClosingByTimePeriod[timePeriodIdList[1]]!0) - (glAccountInfo.postedNoClosingByTimePeriod[timePeriodIdList[0]]!0), currencyUomId)}</td>
+                </#if>
             </tr>
         <#else>
             <!-- ${glAccountInfo.accountCode}: ${glAccountInfo.accountName} ${glAccountInfo.postedNoClosingByTimePeriod} -->
@@ -55,13 +66,16 @@ along with this software (see the LICENSE.md file). If not, see
     </#list>
     <#if classInfo.childClassInfoList?has_content>
         <tr<#if depth == 1> class="text-info"</#if>>
-            <td style="padding-left: ${(depth-1) * 2}.3em;"><strong>${ec.l10n.localize("Total " + classInfo.className)}</strong></td>
+            <td style="padding-left: ${(depth-1) * 2}.3em;"><strong>${ec.l10n.localize(classInfo.className + " Total")}</strong></td>
             <#if (timePeriodIdList?size > 1)>
                 <td class="text-right"><strong>${ec.l10n.formatCurrency(classInfo.totalPostedNoClosingByTimePeriod['ALL']!0, currencyUomId)}</strong></td>
             </#if>
             <#list timePeriodIdList as timePeriodId>
                 <td class="text-right"><strong>${ec.l10n.formatCurrency(classInfo.totalPostedNoClosingByTimePeriod[timePeriodId]!0, currencyUomId)}</strong></td>
             </#list>
+            <#if showDiff>
+                <td class="text-right"><strong>${ec.l10n.formatCurrency((classInfo.totalPostedNoClosingByTimePeriod[timePeriodIdList[1]]!0) - (classInfo.totalPostedNoClosingByTimePeriod[timePeriodIdList[0]]!0), currencyUomId)}</strong></td>
+            </#if>
         </tr>
     </#if>
 </#macro>
@@ -71,11 +85,14 @@ along with this software (see the LICENSE.md file). If not, see
         <tr>
             <th>${ec.l10n.localize("Income Statement")}</th>
             <#if (timePeriodIdList?size > 1)>
-                <th class="text-right">All Periods</th>
+                <th class="text-right">${ec.l10n.localize("All Periods")}</th>
             </#if>
             <#list timePeriodIdList as timePeriodId>
                 <th class="text-right">${timePeriodIdMap[timePeriodId].periodName} (Closed: ${timePeriodIdMap[timePeriodId].isClosed})</th>
             </#list>
+            <#if showDiff>
+                <th class="text-right">${ec.l10n.localize("Difference")}</th>
+            </#if>
         </tr>
     </thead>
     <tbody>
@@ -90,6 +107,9 @@ along with this software (see the LICENSE.md file). If not, see
             <#list timePeriodIdList as timePeriodId>
                 <td class="text-right"><strong>${ec.l10n.formatCurrency((classInfoById.REVENUE.totalPostedNoClosingByTimePeriod[timePeriodId]!0) + (classInfoById.CONTRA_REVENUE.totalPostedNoClosingByTimePeriod[timePeriodId]!0), currencyUomId)}</strong></td>
             </#list>
+            <#if showDiff>
+                <td class="text-right"><strong>${ec.l10n.formatCurrency((classInfoById.REVENUE.totalPostedNoClosingByTimePeriod[timePeriodIdList[1]]!0) + (classInfoById.CONTRA_REVENUE.totalPostedNoClosingByTimePeriod[timePeriodIdList[1]]!0) - (classInfoById.REVENUE.totalPostedNoClosingByTimePeriod[timePeriodIdList[0]]!0) - (classInfoById.CONTRA_REVENUE.totalPostedNoClosingByTimePeriod[timePeriodIdList[0]]!0), currencyUomId)}</strong></td>
+            </#if>
         </tr>
 
         <@showClass classInfoById.COST_OF_SALES 1/>
@@ -101,6 +121,9 @@ along with this software (see the LICENSE.md file). If not, see
             <#list timePeriodIdList as timePeriodId>
                 <td class="text-right"><strong>${ec.l10n.formatCurrency(grossProfitOnSalesMap[timePeriodId]!0, currencyUomId)}</strong></td>
             </#list>
+            <#if showDiff>
+                <td class="text-right"><strong>${ec.l10n.formatCurrency((grossProfitOnSalesMap[timePeriodIdList[1]]!0) - (grossProfitOnSalesMap[timePeriodIdList[0]]!0), currencyUomId)}</strong></td>
+            </#if>
         </tr>
 
         <@showClass classInfoById.INCOME 1/>
@@ -113,6 +136,9 @@ along with this software (see the LICENSE.md file). If not, see
             <#list timePeriodIdList as timePeriodId>
                 <td class="text-right"><strong>${ec.l10n.formatCurrency(netOperatingIncomeMap[timePeriodId]!0, currencyUomId)}</strong></td>
             </#list>
+            <#if showDiff>
+                <td class="text-right"><strong>${ec.l10n.formatCurrency((netOperatingIncomeMap[timePeriodIdList[1]]!0) - (netOperatingIncomeMap[timePeriodIdList[0]]!0), currencyUomId)}</strong></td>
+            </#if>
         </tr>
 
         <@showClass classInfoById.NON_OP_EXPENSE 1/>
@@ -124,6 +150,45 @@ along with this software (see the LICENSE.md file). If not, see
             <#list timePeriodIdList as timePeriodId>
                 <td class="text-right"><strong>${ec.l10n.formatCurrency(netIncomeMap[timePeriodId]!0, currencyUomId)}</strong></td>
             </#list>
+            <#if showDiff>
+                <td class="text-right"><strong>${ec.l10n.formatCurrency((netIncomeMap[timePeriodIdList[1]]!0) - (netIncomeMap[timePeriodIdList[0]]!0), currencyUomId)}</strong></td>
+            </#if>
         </tr>
     </tbody>
 </table>
+
+<#if showCharts>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.min.js" type="text/javascript"></script>
+    <ul class="float-plain" style="margin-top:12px;">
+    <#if (timePeriodIdList?size > 1) && topExpenseByTimePeriod['ALL']?has_content>
+        <#assign topExpenseList = topExpenseByTimePeriod['ALL']>
+        <li>
+            <div class="text-center"><strong>Expenses All Periods</strong></div>
+            <canvas id="ExpenseChartAll" style="width:360px;"></canvas>
+            <script>
+                var expenseChartAll = new Chart(document.getElementById("ExpenseChartAll"), { type: 'pie',
+                    data: { labels:[<#list topExpenseList! as topExpense>'${topExpense.className}'<#sep>,</#list>],
+                        datasets:[{ data:[<#list topExpenseList! as topExpense>${topExpense.amount?c}<#sep>,</#list>],
+                        backgroundColor:[<#list backgroundColors as color>'${color}'<#sep>,</#list>] }]
+                    }
+                });
+            </script>
+        </li>
+    </#if>
+    <#list timePeriodIdList as timePeriodId><#if topExpenseByTimePeriod[timePeriodId]?has_content>
+        <#assign topExpenseList = topExpenseByTimePeriod[timePeriodId]>
+        <li>
+            <div class="text-center"><strong>Expenses ${timePeriodIdMap[timePeriodId].periodName}</strong></div>
+            <canvas id="ExpenseChart${timePeriodId_index}" style="width:360px;"></canvas>
+            <script>
+                var expenseChartAll = new Chart(document.getElementById("ExpenseChart${timePeriodId_index}"), { type: 'pie',
+                    data: { labels:[<#list topExpenseList! as topExpense>'${topExpense.className}'<#sep>,</#list>],
+                        datasets:[{ data:[<#list topExpenseList! as topExpense>${topExpense.amount?c}<#sep>,</#list>],
+                            backgroundColor:[<#list backgroundColors as color>'${color}'<#sep>,</#list>] }]
+                    }
+                });
+            </script>
+        </li>
+    </#if></#list>
+    </ul>
+</#if>

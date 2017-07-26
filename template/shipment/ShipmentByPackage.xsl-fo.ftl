@@ -17,6 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
 <#assign dateFormat = dateFormat!"dd MMM yyyy">
 <#assign dateTimeFormat = dateTimeFormat!"yyyy-MM-dd HH:mm">
 
+<#macro encodeText textValue>${(Static["org.moqui.util.StringUtilities"].encodeForXmlAttribute(textValue!"", false))!""}</#macro>
+
 <fo:root xmlns:fo="http://www.w3.org/1999/XSL/Format" font-family="Helvetica, sans-serif" font-size="10pt">
     <fo:layout-master-set>
         <fo:simple-page-master master-name="letter-portrait" page-width="8.5in" page-height="11in"
@@ -29,7 +31,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <fo:page-sequence master-reference="letter-portrait">
         <fo:static-content flow-name="xsl-region-before">
-        <#if fromPartyDetail?has_content><fo:block font-size="14pt" text-align="center">${(Static["org.moqui.util.StringUtilities"].encodeForXmlAttribute(fromPartyDetail.organizationName!"", true))!""}${(fromPartyDetail.firstName)!""} ${(fromPartyDetail.lastName)!""}</fo:block></#if>
+        <#if fromPartyDetail?has_content><fo:block font-size="14pt" text-align="center"><@encodeText fromPartyDetail.organizationName!""/><@encodeText fromPartyDetail.firstName!""/> <@encodeText fromPartyDetail.lastName!""/></fo:block></#if>
             <fo:block font-size="12pt" text-align="center" margin-bottom="0.1in">Shipment by Package</fo:block>
             <fo:block-container absolute-position="absolute" top="0in" right="0.5in" width="3in">
                 <fo:block text-align="right">
@@ -62,36 +64,43 @@ along with this software (see the LICENSE.md file). If not, see
                 <fo:table-cell padding="3pt" width="3in">
                     <fo:block font-weight="bold">Shipment #</fo:block>
                     <fo:block>${shipmentId}</fo:block>
-                <#if originFacility?has_content>
-                    <fo:block font-weight="bold">Origin Facility</fo:block>
-                    <fo:block>${ec.resource.expand("FacilityNameTemplate", "", originFacility)}</fo:block>
-                </#if>
-                <#if destinationFacility?has_content>
-                    <fo:block font-weight="bold">Destination Facility</fo:block>
-                    <fo:block>${ec.resource.expand("FacilityNameTemplate", "", destinationFacility)}</fo:block>
-                </#if>
+                    <#if invoiceList?has_content>
+                        <fo:block font-weight="bold">Invoice</fo:block>
+                        <#list invoiceList as invoice>
+                            <fo:block>${invoice.invoiceId}<#if invoice.referenceNumber?has_content> - PO ${invoice.referenceNumber}</#if></fo:block>
+                        </#list>
+                    </#if>
+                    <#if originFacility?has_content>
+                        <fo:block font-weight="bold">Origin Facility</fo:block>
+                        <fo:block>${ec.resource.expand("FacilityNameTemplate", "", originFacility)}</fo:block>
+                    </#if>
+                    <#if destinationFacility?has_content>
+                        <fo:block font-weight="bold">Destination Facility</fo:block>
+                        <fo:block>${ec.resource.expand("FacilityNameTemplate", "", destinationFacility)}</fo:block>
+                    </#if>
                 </fo:table-cell>
                 <fo:table-cell padding="3pt" width="1.5in">
-                <#if shipment.estimatedReadyDate?exists>
-                    <fo:block font-weight="bold">Est. Ready</fo:block>
-                    <fo:block>${ec.l10n.format(shipment.estimatedReadyDate, dateTimeFormat)}</fo:block>
-                </#if>
-                <#if shipment.estimatedShipDate?exists>
-                    <fo:block font-weight="bold">Est. Ship</fo:block>
-                    <fo:block>${ec.l10n.format(shipment.estimatedShipDate, dateTimeFormat)}</fo:block>
-                </#if>
-                <#if shipment.estimatedArrivalDate?exists>
-                    <fo:block font-weight="bold">Est. Arrival</fo:block>
-                    <fo:block>${ec.l10n.format(shipment.estimatedArrivalDate, dateTimeFormat)}</fo:block>
-                </#if>
+                    <#if shipment.estimatedReadyDate?exists>
+                        <fo:block font-weight="bold">Est. Ready</fo:block>
+                        <fo:block>${ec.l10n.format(shipment.estimatedReadyDate, dateTimeFormat)}</fo:block>
+                    </#if>
+                    <#if shipment.estimatedShipDate?exists>
+                        <fo:block font-weight="bold">Est. Ship</fo:block>
+                        <fo:block>${ec.l10n.format(shipment.estimatedShipDate, dateTimeFormat)}</fo:block>
+                    </#if>
+                    <#if shipment.estimatedArrivalDate?exists>
+                        <fo:block font-weight="bold">Est. Arrival</fo:block>
+                        <fo:block>${ec.l10n.format(shipment.estimatedArrivalDate, dateTimeFormat)}</fo:block>
+                    </#if>
+                    <fo:block font-size="6pt"> </fo:block>
                 </fo:table-cell>
                 <fo:table-cell padding="3pt" width="3in">
                 <#if toContactInfo.postalAddress?has_content>
                     <#if toContactInfo.postalAddress.toName?has_content || toContactInfo.postalAddress.attnName?has_content>
-                        <#if toContactInfo.postalAddress.toName?has_content><fo:block font-weight="bold">To: ${toContactInfo.postalAddress.toName}</fo:block></#if>
-                        <#if toContactInfo.postalAddress.attnName?has_content><fo:block font-weight="bold">Attn: ${toContactInfo.postalAddress.attnName}</fo:block></#if>
+                        <#if toContactInfo.postalAddress.toName?has_content><fo:block font-weight="bold">To: <@encodeText toContactInfo.postalAddress.toName/></fo:block></#if>
+                        <#if toContactInfo.postalAddress.attnName?has_content><fo:block font-weight="bold">Attn: <@encodeText toContactInfo.postalAddress.attnName/></fo:block></#if>
                     <#else>
-                        <fo:block font-weight="bold">${(toPartyDetail.organizationName)!""} ${(toPartyDetail.firstName)!""} ${(toPartyDetail.middleName)!""} ${(toPartyDetail.lastName)!""}</fo:block>
+                        <fo:block font-weight="bold"><@encodeText (toPartyDetail.organizationName)!""/> <@encodeText (toPartyDetail.firstName)!""/> <@encodeText (toPartyDetail.middleName)!""/> <@encodeText (toPartyDetail.lastName)!""/></fo:block>
                     </#if>
                     <fo:block font-size="8pt">${(toContactInfo.postalAddress.address1)!""}<#if toContactInfo.postalAddress.unitNumber?has_content> #${toContactInfo.postalAddress.unitNumber}</#if></fo:block>
                     <#if toContactInfo.postalAddress.address2?has_content><fo:block font-size="8pt">${toContactInfo.postalAddress.address2}</fo:block></#if>
@@ -106,6 +115,10 @@ along with this software (see the LICENSE.md file). If not, see
                 </#if>
                 </fo:table-cell>
             </fo:table-row></fo:table-body></fo:table>
+            <#if shipment.handlingInstructions?has_content>
+                <fo:block font-weight="bold" margin-top="0.1in">Shipping Instructions</fo:block>
+                <fo:block>${shipment.handlingInstructions}</fo:block>
+            </#if>
 
         <#list packageInfoList as packageInfo>
             <fo:table table-layout="fixed" margin-top="0.1in" width="7.5in"><fo:table-body><fo:table-row>
@@ -119,6 +132,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <fo:inline font-weight="bold">Weight</fo:inline> ${ec.l10n.format((packageInfo.shipmentPackage.weight)!, '')} ${(packageInfo.weightUom.description)!''}
                 </fo:block></fo:table-cell>
             </fo:table-row></fo:table-body></fo:table>
+            <#if packageInfo.contentInfoList?has_content>
             <fo:table table-layout="fixed" width="7.5in" border-bottom="solid black">
                 <fo:table-header font-size="9pt" font-weight="bold" border-bottom="solid black">
                     <fo:table-cell width="0.75in" padding="2pt"><fo:block text-align="right">Quantity</fo:block></fo:table-cell>
@@ -138,6 +152,7 @@ along with this software (see the LICENSE.md file). If not, see
                     </#list>
                 </fo:table-body>
             </fo:table>
+            </#if>
         </#list>
 
         <#if productInfoList?has_content>
@@ -219,6 +234,24 @@ along with this software (see the LICENSE.md file). If not, see
                                     <fo:table-cell padding="${cellPadding}"><fo:block text-align="right">${locationInfo.quantityByBin.get(binLocationNumber!)}</fo:block></fo:table-cell>
                                 </fo:table-row>
                             </#list>
+                        </#list></#if>
+                        <#if productInfo.productIssuedLocationInfoList?has_content><#list productInfo.productIssuedLocationInfoList as locationInfo>
+                            <fo:table-row font-size="9pt" border-top="thin solid black">
+                                <fo:table-cell padding="${cellPadding}"><fo:block text-align="left" font-weight="bold">Iss</fo:block></fo:table-cell>
+                                <fo:table-cell padding="${cellPadding}"><fo:block text-align="left">${locationInfo.description!" "}</fo:block></fo:table-cell>
+                                <fo:table-cell padding="${cellPadding}"><fo:block text-align="center">${locationInfo.areaId!" "}</fo:block></fo:table-cell>
+                                <fo:table-cell padding="${cellPadding}"><fo:block text-align="center">${locationInfo.aisleId!" "}</fo:block></fo:table-cell>
+                                <fo:table-cell padding="${cellPadding}"><fo:block text-align="center">${locationInfo.sectionId!" "}</fo:block></fo:table-cell>
+                                <fo:table-cell padding="${cellPadding}"><fo:block text-align="center">${locationInfo.levelId!" "}</fo:block></fo:table-cell>
+                                <fo:table-cell padding="${cellPadding}"><fo:block text-align="center">${locationInfo.positionId!" "}</fo:block></fo:table-cell>
+
+                                <fo:table-cell padding="${cellPadding}" number-columns-spanned="3">
+                                    <fo:block><#if locationInfo.lot?has_content>${ec.resource.expand('LotNameTemplate', '', locationInfo.lot)}</#if> </fo:block></fo:table-cell>
+                            </fo:table-row>
+                            <fo:table-row font-size="9pt">
+                                <fo:table-cell padding="${cellPadding}" number-columns-spanned="9"><fo:block> </fo:block></fo:table-cell>
+                                <fo:table-cell padding="${cellPadding}"><fo:block text-align="right">${locationInfo.quantity!}</fo:block></fo:table-cell>
+                            </fo:table-row>
                         </#list></#if>
                     </#list>
                 </fo:table-body>
