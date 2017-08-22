@@ -12,8 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
         default-menu-include="false">
 
     <transition name="editParty"><default-response url="../EditParty"/></transition>
@@ -33,47 +32,12 @@ along with this software (see the LICENSE.md file). If not, see
 
     <transition-include name="searchPartyList" location="component://SimpleScreens/template/party/PartyForms.xml"/>
     <transition-include name="getGeoCountryStates" location="component://SimpleScreens/template/party/PartyForms.xml"/>
+    <transition-include name="getPartyClassificationList" location="component://SimpleScreens/template/party/PartyTransitions.xml"/>
 
     <actions>
-        <service-call name="mantle.party.PartyServices.find#Party" in-map="context + [leadingWildcard:true]" out-map="context"/>
+        <service-call name="mantle.party.PartyServices.search#Party" in-map="context" out-map="context"/>
     </actions>
     <widgets>
-        <container-dialog id="FindOptionsDialog" button-text="Find Options">
-            <form-single name="FindOptionsForm" transition=".">
-                <field name="pseudoId"><default-field><text-line size="20"/></default-field></field>
-                <field name="roleTypeId"><default-field title="Role">
-                    <drop-down allow-empty="true"><entity-options key="${roleTypeId}" text="${description}">
-                        <entity-find entity-name="mantle.party.RoleType">
-                            <order-by field-name="description"/></entity-find>
-                    </entity-options></drop-down>
-                </default-field></field>
-
-                <field name="combinedName"><default-field><text-line size="40"/></default-field></field>
-                <field name="organizationName"><default-field><text-line size="40"/></default-field></field>
-                <field name="firstName"><default-field><text-line size="40"/></default-field></field>
-                <field name="lastName"><default-field><text-line size="40"/></default-field></field>
-                <field name="username"><default-field><text-line size="40"/></default-field></field>
-
-                <field name="address1"><default-field><text-line size="40"/></default-field></field>
-                <field name="city"><default-field><text-line size="30"/></default-field></field>
-                <field name="stateProvinceGeoId"><default-field title="State">
-                    <drop-down allow-empty="true"><entity-options key="${toGeoId}" text="${geoName}">
-                        <entity-find entity-name="moqui.basic.GeoAssocAndToDetail">
-                            <econdition field-name="geoId" value="USA"/>
-                            <econdition field-name="geoAssocTypeEnumId" value="GAT_REGIONS"/>
-                            <order-by field-name="geoName"/>
-                        </entity-find>
-                    </entity-options></drop-down>
-                </default-field></field>
-                <field name="postalCode"><default-field><text-line size="10"/></default-field></field>
-
-                <field name="emailAddress"><default-field><text-line size="40"/></default-field></field>
-                <field name="areaCode"><default-field><text-line size="5"/></default-field></field>
-                <field name="contactNumber"><default-field><text-line size="10"/></default-field></field>
-
-                <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
-            </form-single>
-        </container-dialog>
         <container-dialog id="CreatePersonDialog" button-text="New Person">
             <form-single name="CreatePersonForm" transition="createPerson">
                 <field name="roleTypeId"><default-field><hidden/></default-field></field>
@@ -121,14 +85,14 @@ along with this software (see the LICENSE.md file). If not, see
                 </default-field></field>
                 <field name="cardNumber"><default-field title=""><text-line size="16"/></default-field></field>
                 <field name="expireMonth">
-                    <default-field title=""><drop-down current="selected" no-current-selected-key="${ec.l10n.format(ec.user.nowTimestamp, 'MM')}">
+                    <default-field title=""><drop-down no-current-selected-key="${ec.l10n.format(ec.user.nowTimestamp, 'MM')}">
                         <option key="01"/><option key="02"/><option key="03"/><option key="04"/><option key="05"/>
                         <option key="06"/><option key="07"/><option key="08"/><option key="09"/><option key="10"/>
                         <option key="11"/><option key="12"/>
                     </drop-down></default-field>
                 </field>
                 <field name="expireYear">
-                    <default-field title=""><drop-down current="selected" no-current-selected-key="${ec.l10n.format(ec.user.nowTimestamp, 'yyyy')}">
+                    <default-field title=""><drop-down no-current-selected-key="${ec.l10n.format(ec.user.nowTimestamp, 'yyyy')}">
                         <list-options list="org.moqui.util.StringUtilities.getYearList(10)"/></drop-down></default-field>
                 </field>
 
@@ -147,7 +111,7 @@ along with this software (see the LICENSE.md file). If not, see
                     </drop-down>
                 </default-field></field>
                 <field name="stateProvinceGeoId"><default-field title="">
-                    <drop-down><dynamic-options transition="getGeoCountryStates" value-field="geoId" label-field="label">
+                    <drop-down><dynamic-options transition="getGeoCountryStates" value-field="geoId">
                         <depends-on field="countryGeoId"/></dynamic-options></drop-down>
                 </default-field></field>
                 <field name="postalCode"><default-field title="" tooltip="Zip/Postal Code"><text-line size="8"/></default-field></field>
@@ -193,7 +157,7 @@ along with this software (see the LICENSE.md file). If not, see
         <container-dialog id="CreateAccountDialog" button-text="New Sales Account">
             <form-single name="CreateAccountForm" transition="createAccount">
                 <field name="organizationName"><default-field><text-line size="60"/></default-field></field>
-                <field name="parentAccountPartyId"><default-field title="Parent Account">
+                <field name="parentAccountPartyId"><default-field title="Parent Sales Account">
                     <text-line ac-transition="searchPartyList" ac-min-length="2" size="50" parameter-map="[roleTypeId:'Account']"/>
                 </default-field></field>
                 <field name="submitButton"><default-field title="Create"><submit/></default-field></field>
@@ -201,7 +165,7 @@ along with this software (see the LICENSE.md file). If not, see
         </container-dialog>
         <container-dialog id="CreateContactDialog" button-text="New Sales Contact">
             <form-single name="CreateContactForm" transition="createContact">
-                <field name="accountPartyId"><default-field title="Account">
+                <field name="accountPartyId"><default-field title="Sales Account">
                     <text-line ac-transition="searchPartyList" ac-min-length="2" size="50" parameter-map="[roleTypeId:'Account']"/>
                 </default-field></field>
                 <field name="firstName"><default-field><text-line size="30"/></default-field></field>
@@ -216,32 +180,87 @@ along with this software (see the LICENSE.md file). If not, see
             </form-single>
         </container-dialog>
 
-        <form-list name="PartyListForm" list="partyIdList" list-entry="partyId" skip-form="true">
-            <row-actions>
-                <entity-find-one entity-name="mantle.party.PartyDetail" value-field="party"/>
-                <entity-find-one entity-name="moqui.security.UserAccount" value-field="userAccount">
-                    <field-map field-name="partyId"/></entity-find-one>
-            </row-actions>
+        <link url="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax"
+                url-type="plain" link-type="anchor" target-window="_blank" text="Search String Reference"/>
+        <form-single name="OuterSearchForm">
+            <field name="anyField"><default-field title="" tooltip="Matches whole words, use the asterisk (*) wildcard to match partial words; use field:term to search a specific field">
+                <text-line size="100"/></default-field></field>
+            <field name="submitButton"><default-field title="Search"><submit/></default-field></field>
+            <field-layout><field-row-big><field-ref name="anyField"/><field-ref name="submitButton"/></field-row-big></field-layout>
+        </form-single>
+
+        <form-list name="PartyListForm" list="documentList" skip-form="true" header-dialog="true">
+            <field name="anyField"><header-field><text-line size="80"/></header-field></field>
+
             <field name="pseudoId">
-                <header-field title="ID" show-order-by="true"><text-find size="10" hide-options="true"/></header-field>
-                <default-field><link url="editParty" text="${party.pseudoId}" link-type="anchor"/></default-field>
+                <header-field title="ID" show-order-by="true"><text-line size="20"/></header-field>
+                <default-field><link url="editParty" text="${pseudoId}" link-type="anchor"/></default-field>
             </field>
+            <field name="idValue"><header-field title="Other ID"><text-line size="20"/></header-field></field>
+            <field name="gatewayCimId"><header-field title="CIM ID"><text-line size="20"/></header-field></field>
+
+            <field name="organizationName"><header-field><text-line size="40"/></header-field></field>
+            <field name="firstName"><header-field><text-line size="40"/></header-field></field>
+            <field name="lastName"><header-field><text-line size="40"/></header-field></field>
+
             <field name="combinedName">
-                <header-field title="Name" show-order-by="case-insensitive"><text-find size="20" hide-options="true"/></header-field>
-                <default-field><link url="editParty" text="PartyNameOnlyTemplate" text-map="party" link-type="anchor"/></default-field>
+                <header-field title="Name" show-order-by="true"><text-line size="40"/></header-field>
+                <default-field><link url="editParty" text="${combinedName}" link-type="anchor"/></default-field>
             </field>
             <field name="username">
-                <header-field><text-find size="10" hide-options="true"/></header-field>
-                <default-field><display text="${userAccount?.username?:''}"/></default-field>
+                <header-field show-order-by="true"><text-line size="20"/></header-field>
+                <default-field><display text="${userAccounts ? userAccounts*.username.join(', ') : ''}"/></default-field>
             </field>
-            <field name="disabled" from="party.disabled">
+
+            <field name="roleTypeId">
+                <header-field title="Role">
+                    <drop-down allow-empty="true"><entity-options key="${roleTypeId}" text="${description}">
+                        <entity-find entity-name="mantle.party.RoleType">
+                            <order-by field-name="description"/></entity-find>
+                    </entity-options></drop-down>
+                </header-field>
+                <default-field><display text="${roles ? roles*.role.join(', ') : ''}"/></default-field>
+            </field>
+
+            <field name="classificationTypeEnumId"><header-field title="Class Type">
+                <widget-template-include location="component://webroot/template/screen/BasicWidgetTemplates.xml#enumDropDown">
+                    <set field="enumTypeId" value="PartyClassificationType"/><set field="noCurrentSelectedKey" value="PcltCustomer"/>
+                    <set field="allowEmpty" value="true"/></widget-template-include>
+            </header-field></field>
+            <field name="partyClassificationId">
+                <header-field title="Class">
+                    <drop-down allow-empty="true"><dynamic-options transition="getPartyClassificationList"
+                            value-field="partyClassificationId" label-field="description">
+                        <depends-on field="classificationTypeEnumId"/></dynamic-options></drop-down>
+                </header-field>
+                <default-field><display text="${classifications ? classifications*.class.join(', ') : ''}"/></default-field>
+            </field>
+
+            <field name="disabled">
                 <header-field><drop-down allow-empty="true"><option key="Y"/><option key="N"/></drop-down></header-field>
                 <default-field><display/></default-field>
             </field>
-            <field name="hasDuplicates" from="party.hasDuplicates">
-                <header-field><drop-down allow-empty="true"><option key="Y"/><option key="N"/></drop-down></header-field>
+            <field name="hasDuplicates">
+                <header-field title="Dups"><drop-down allow-empty="true"><option key="Y"/><option key="N"/></drop-down></header-field>
                 <default-field><display/></default-field>
             </field>
+
+            <field name="infoString"><header-field title="Email"><text-line size="40"/></header-field></field>
+            <field name="areaCode"><header-field><text-line size="5"/></header-field></field>
+            <field name="contactNumber"><header-field><text-line size="10"/></header-field></field>
+
+            <field name="address1"><header-field><text-line size="40"/></header-field></field>
+            <field name="city"><header-field><text-line size="30"/></header-field></field>
+            <field name="stateProvinceGeoId"><header-field title="State">
+                <drop-down allow-empty="true"><entity-options key="${toGeoId}" text="${geoName}">
+                    <entity-find entity-name="moqui.basic.GeoAssocAndToDetail">
+                        <econdition field-name="geoId" value="USA"/>
+                        <econdition field-name="geoAssocTypeEnumId" value="GAT_REGIONS"/>
+                        <order-by field-name="geoName"/>
+                    </entity-find>
+                </entity-options></drop-down>
+            </header-field></field>
+            <field name="postalCode"><header-field><text-line size="10"/></header-field></field>
 
             <field name="submitButton">
                 <header-field title="Find"><submit/></header-field>
@@ -251,5 +270,8 @@ along with this software (see the LICENSE.md file). If not, see
                 </default-field>
             </field>
         </form-list>
+
+        <container-row><row-col md="2" style="text-right"><label text="Current Search String" type="strong"/></row-col>
+            <row-col><label text="${queryString?:'No Current Search'}"/></row-col></container-row>
     </widgets>
 </screen>
