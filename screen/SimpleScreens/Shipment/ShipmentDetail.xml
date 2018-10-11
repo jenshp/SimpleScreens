@@ -77,7 +77,7 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/></transition>
     <transition name="updateContent"><service-call name="mantle.shipment.ShipmentServices.update#ShipmentContent"/>
         <default-response url="."/></transition>
-    <transition name="downloadContent"><parameter name="shipmentContentId"/>
+    <transition name="downloadContent" read-only="true"><parameter name="shipmentContentId"/>
         <actions><entity-find-one entity-name="mantle.shipment.ShipmentContent" value-field="shipmentContent"/>
             <script>ec.web.sendResourceResponse(shipmentContent.contentLocation)</script></actions>
         <default-response type="none"/>
@@ -1165,17 +1165,17 @@ along with this software (see the LICENSE.md file). If not, see
                                 condition="shippingGatewayConfigId &amp;&amp; packageRouteSeg?.gatewayLabelId &amp;&amp; !packageRouteSeg?.gatewayRefundId"
                                 parameter-map="[shipmentId:shipmentId, shipmentPackageSeqId:shipmentPackage.shipmentPackageSeqId,
                                     shipmentRouteSegmentSeqId:packageRouteSeg.shipmentRouteSegmentSeqId]"/>
-                        <link url="removeShipmentLabelInfo" text="Clear Label Info" btn-type="danger"
+                        <link url="removeShipmentLabelInfo" text="Reset Label" btn-type="danger"
                                 confirmation="Clear label data? This will allow getting a new label, and system keeps a history of label IDs, but otherwise current label will no longer be tracked. Use only when there are errors, etc with the label."
                                 condition="shippingGatewayConfigId &amp;&amp; packageRouteSeg?.gatewayLabelId"
                                 parameter-map="[shipmentId:shipmentId, shipmentPackageSeqId:shipmentPackage.shipmentPackageSeqId,
                                     shipmentRouteSegmentSeqId:packageRouteSeg.shipmentRouteSegmentSeqId]"/>
-                        <link url="removeShipmentReturnLabelInfo" text="Clear Ret Label Info" btn-type="danger"
+                        <link url="removeShipmentReturnLabelInfo" text="Reset Ret Label" btn-type="danger"
                                 confirmation="Clear return label data? This will allow getting a new label, and system keeps a history of label IDs, but otherwise current label will no longer be tracked. Use only when there are errors, etc with the label."
                                 condition="shippingGatewayConfigId &amp;&amp; packageRouteSeg?.returnGatewayLabelId"
                                 parameter-map="[shipmentId:shipmentId, shipmentPackageSeqId:shipmentPackage.shipmentPackageSeqId,
                                     shipmentRouteSegmentSeqId:packageRouteSeg.shipmentRouteSegmentSeqId]"/>
-                        <link url="resetShipmentPackage" text="Reset" confirmation="Reset box type, weight, and contents?" btn-type="danger"
+                        <link url="resetShipmentPackage" text="Reset Pkg" confirmation="Reset box type, weight, and contents?" btn-type="danger"
                                 parameter-map="[shipmentId:packageAndRouteSeg.shipmentId, shipmentPackageSeqId:packageAndRouteSeg.shipmentPackageSeqId]"/>
                         <link url="deletePackage" text="Delete" condition="!shipmentPackageContentList" btn-type="danger"
                                 confirmation="Delete package ${shipmentPackage.shipmentPackageSeqId}?"
