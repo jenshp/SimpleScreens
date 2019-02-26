@@ -757,6 +757,32 @@ along with this software (see the LICENSE.md file). If not, see
         </row-col><row-col lg="6">
             <!-- ========== Right Column ========== -->
 
+            <section name="MembershipSection"><actions>
+                <service-call name="moit.cowork.UserServices.get#MembershipByOrganization" in-map="[partyId:partyId]" out-map="context"/>
+
+
+            </actions><widgets>
+                <container-box><box-header title="Memberships"/><box-toolbar>
+                </box-toolbar><box-body>
+                    <section-iterate name="MembershipIterateSection" list="membershipList" entry="membershipEntry"><actions>
+                        <entity-find-one entity-name="mantle.product.Product" value-field="product">
+                            <field-map field-name="productId" from="membershipEntry"/></entity-find-one>
+                        <set field="membershipName" from="product.productName"/>
+                    </actions><widgets>
+                        <!--label text="By ${paua?.firstName?:''} ${paua?.lastName?:''} (${paua?.username ?: partyNote.userId}) at ${ec.l10n.format(partyNote.noteDate, 'yyyy-MM-dd HH:mm')}" type="strong"/-->
+                        <label text="${membershipEntry} - ${membershipName}" type="p"/>
+                    </widgets></section-iterate>
+
+                    <!--form-list name="MembershipFormList" list="membershipList" skip-form="true">
+                        <field name="membership"><default-field title="ID">
+                            <display/></default-field></field>
+                        <field name="membershipName"><default-field title="Name">
+                            <display/></default-field></field>
+                    </form-list-->
+
+                </box-body></container-box>
+            </widgets></section>
+
             <section name="NotesSection"><actions>
                 <entity-find entity-name="mantle.party.PartyNote" list="partyNoteList">
                     <econdition field-name="partyId"/><order-by field-name="-noteDate"/></entity-find>
