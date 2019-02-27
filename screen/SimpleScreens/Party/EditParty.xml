@@ -764,21 +764,22 @@ along with this software (see the LICENSE.md file). If not, see
             </actions><widgets>
                 <container-box><box-header title="Memberships"/><box-toolbar>
                 </box-toolbar><box-body>
-                    <section-iterate name="MembershipIterateSection" list="membershipList" entry="membershipEntry"><actions>
+                    <!--section-iterate name="MembershipIterateSection" list="membershipList" entry="membershipEntry"><actions>
                         <entity-find-one entity-name="mantle.product.Product" value-field="product">
                             <field-map field-name="productId" from="membershipEntry"/></entity-find-one>
                         <set field="membershipName" from="product.productName"/>
                     </actions><widgets>
-                        <!--label text="By ${paua?.firstName?:''} ${paua?.lastName?:''} (${paua?.username ?: partyNote.userId}) at ${ec.l10n.format(partyNote.noteDate, 'yyyy-MM-dd HH:mm')}" type="strong"/-->
                         <label text="${membershipEntry} - ${membershipName}" type="p"/>
-                    </widgets></section-iterate>
+                    </widgets></section-iterate-->
 
-                    <!--form-list name="MembershipFormList" list="membershipList" skip-form="true">
-                        <field name="membership"><default-field title="ID">
+                    <form-list name="MembershipFormList" list="membershipList" skip-form="true">
+                        <field name="productId"><default-field title="ID">
                             <display/></default-field></field>
                         <field name="membershipName"><default-field title="Name">
                             <display/></default-field></field>
-                    </form-list-->
+                        <field name="quantity"><default-field title="Quantity">
+                            <display/></default-field></field>
+                    </form-list>
 
                 </box-body></container-box>
             </widgets></section>
