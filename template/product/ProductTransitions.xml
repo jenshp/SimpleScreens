@@ -211,6 +211,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </script>
             </then><else>
                 <set field="excludeZeroQohBool" from="'true'.equals(excludeZeroQoh)"/>
+                <message type="warning">term: $term, $productId, $facilityId, $ownerPartyId, $assetTypeEnumId, $classEnumId</message>
                 <entity-find entity-name="mantle.product.asset.AssetFindView" list="assetList" limit="20">
                     <econdition field-name="productId" ignore-if-empty="true"/>
                     <econdition field-name="facilityId" ignore-if-empty="true"/>
@@ -226,12 +227,24 @@ along with this software (see the LICENSE.md file). If not, see
                         <econdition field-name="pseudoId" operator="like" value="%${term}%" ignore-case="true" ignore="productId"/>
                         <econdition field-name="productName" operator="like" value="%${term}%" ignore-case="true" ignore="productId"/>
                     </econditions>
-                    <select-field field-name="assetId,assetName,availableToPromiseTotal,quantityOnHandTotal,lotId,lotNumber,pseudoId,productName"/>
+                    <select-field field-name="assetId,assetName,availableToPromiseTotal,quantityOnHandTotal,lotId,lotNumber,pseudoId,productName,facilityId"/>
                     <order-by field-name="${assetOrderBy ?: '-receivedDate'}"/>
                 </entity-find>
+
                 <script>
                     def outList = []
-                    for (asset in assetList) outList.add([value:asset.assetId, label:"${ec.resource.expand('AssetNameTemplate','',asset)} - ${ec.resource.expand('ProductNameTemplate','',asset)} ATP ${ec.l10n.format(asset.availableToPromiseTotal, '#,##0.###')} QOH ${ec.l10n.format(asset.quantityOnHandTotal, '#,##0.###')}${asset.lotId || asset.lotNumber ? ' Lot ' + (asset.lotNumber ?: asset.lotId) : ''}".toString()])
+                    //for (asset in assetList) outList.add([value:asset.assetId, label:"${ec.resource.expand('AssetNameTemplate','',asset)} - ${ec.resource.expand('ProductNameTemplate','',asset)} ATP ${ec.l10n.format(asset.availableToPromiseTotal, '#,##0.###')} QOH ${ec.l10n.format(asset.quantityOnHandTotal, '#,##0.###')}${asset.lotId || asset.lotNumber ? ' Lot ' + (asset.lotNumber ?: asset.lotId) : ''}".toString()])
+                    for (asset in assetList) {
+                        </script>
+                        <!-- Recuperación de nombre de facility -->
+                        <entity-find-one entity-name="mantle.facility.Facility" value-field="facilityField">
+                            <field-map field-name="facilityId" from="asset.facilityId"/>
+                        </entity-find-one>
+                        <log level="warn" message="Recorriendo: ${asset.facilityId}"/>
+                        <set field="facilityName" from="facilityField.facilityName"/>
+                        <script>
+                        outList.add([value:asset.assetId, label:"${ec.resource.expand('ProductNameTemplate','',asset)} Disponible ${ec.l10n.format(asset.quantityOnHandTotal, '#,##0.###')}${asset.lotId || asset.lotNumber ? ' Lot ' + (asset.lotNumber ?: asset.lotId) : ''}".toString() + ' (en Bodega '+facilityName+')'])
+                    }
                     ec.web.sendJsonResponse(outList)
                 </script>
             </else></if>
