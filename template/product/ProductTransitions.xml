@@ -211,7 +211,9 @@ along with this software (see the LICENSE.md file). If not, see
                 </script>
             </then><else>
                 <set field="excludeZeroQohBool" from="'true'.equals(excludeZeroQoh)"/>
+
                 <message type="warning">term: $term, $productId, $facilityId, $ownerPartyId, $assetTypeEnumId, $classEnumId</message>
+
                 <entity-find entity-name="mantle.product.asset.AssetFindView" list="assetList" limit="20">
                     <econdition field-name="productId" ignore-if-empty="true"/>
                     <econdition field-name="facilityId" ignore-if-empty="true"/>
