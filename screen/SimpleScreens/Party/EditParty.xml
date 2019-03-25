@@ -269,6 +269,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <field name="firstName"><default-field><text-line size="30"/></default-field></field>
                     <field name="middleName"><default-field><text-line size="20"/></default-field></field>
                     <field name="lastName"><default-field><text-line size="30"/></default-field></field>
+                    <field name="giro"><default-field><text-line size="60"/></default-field></field>
                     <field name="birthDate"><default-field><date-time type="date"/></default-field></field>
                     <field name="externalId"><default-field><text-line size="20"/></default-field></field>
 
