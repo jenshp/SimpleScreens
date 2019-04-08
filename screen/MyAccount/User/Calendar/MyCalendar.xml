@@ -18,10 +18,16 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="eventDetail"><default-response url="../EventDetail"/></transition>
     <transition name="taskDetail"><default-response url="../../Task/TaskDetail"/></transition>
     <transition name="createEvent"><service-call name="mantle.work.EventServices.create#Event"/><default-response url="../EventDetail"/></transition>
+    <!--transition name="createEvent">
+        <service-call name="moit.cowork.UserServices.create#Event"/>
+        <default-response url="../EventDetail"/>
+    </transitioni-->
 
     <transition name="getCalendarEvents">
-        <service-call name="mantle.work.EventServices.get#FullCalendarData" web-send-json-response="eventList"
-                in-map="context + [urlGString:(sri.buildUrl('eventDetail').url + '?workEffortId=${workEffort.workEffortId}')]"/>
+        <!--service-call name="mantle.work.EventServices.get#FullCalendarData" web-send-json-response="eventList"
+                in-map="context + [urlGString:(sri.buildUrl('eventDetail').url + '?workEffortId=${workEffort.workEffortId}')]"/-->
+        <service-call name="moit.cowork.UserServices.get#FullCalendarData" web-send-json-response="eventList"
+                      in-map="context + [urlGString:(sri.buildUrl('eventDetail').url + '?workEffortId=${workEffort.workEffortId}')]"/>
         <default-response type="none"/>
     </transition>
     <transition name="getCalendarTasks">
@@ -72,8 +78,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <script>
     $('#calendar').fullCalendar({ timezone:false, defaultView:'agendaWeek', locale:'${ec.user.locale.toString()}',
         header: { left:'prev,next today', center:'title', right:'month,agendaWeek,agendaDay' },
-        eventSources: [ { url:"${sri.buildUrl('getCalendarEvents').url}", type:'POST', data: { moquiSessionToken:'${ec.web.sessionToken}', partyId:'${partyId}' } },
-            { url:"${sri.buildUrl('getCalendarTasks').url}", type:'POST', data:{ moquiSessionToken:'${ec.web.sessionToken}', partyId:'${partyId}' }, backgroundColor:'#5cb85c', borderColor:'#4cae4c' } ]
+        eventSources: [ { url:"${sri.buildUrl('getCalendarEvents').url}", type:'POST', data: { moquiSessionToken:'${ec.web.sessionToken}', partyId:'${partyId}' } } ]
     });
                 </script>
             ]]></text>
