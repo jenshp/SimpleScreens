@@ -125,7 +125,8 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="createUserPlan">
         <actions>
-            <service-call name="moit.cowork.UserServices.add#UserPlan" in-map="[userId:userId, partyId:partyId, productId:productId, fromDate:fromDate]"/>
+            <log level="warn" message="activeOrgId: $activeOrgId - $context"/>
+            <service-call name="moit.cowork.UserServices.add#UserPlanToOrganization" in-map="[userId:userId, partyId:partyId, activeOrgId:activeOrgId, productId:productId, productStoreId:productStoreId, fromDate:fromDate]"/>
         </actions>
         <default-response url="."></default-response>
     </transition>
@@ -170,6 +171,7 @@ along with this software (see the LICENSE.md file). If not, see
 
         <entity-find entity-name="mantle.party.PartyRole" list="partyRoleList"><econdition field-name="partyId"/></entity-find>
         <set field="roleTypeIdList" from="partyRoleList*.roleTypeId"/>
+
     </actions>
     <widgets>
         <container-row><row-col lg="6">
@@ -783,12 +785,13 @@ along with this software (see the LICENSE.md file). If not, see
         </row-col><row-col lg="6">
             <!-- ========== Right Column ========== -->
 
+            <!-- ========== MOIT ============  -->
+
             <section name="PlanSection"><actions>
                 <!--service-call name="moit.cowork.UserServices.get#PlanByOrganization" in-map="[partyId:partyId]" out-map="context"/-->
                 <entity-find entity-name="moit.cowork.PartyPlanView" list="planList">
                     <econdition field-name="partyId" from="partyId"/>
                 </entity-find>
-
 
             </actions><widgets>
                 <container-box><box-header title="Plans"/><box-toolbar>
@@ -796,6 +799,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <form-single name="CreateUserPlan" transition="createUserPlan">
                             <field name="userId"><default-field><hidden/></default-field></field>
                             <field name="partyId" from="partyId"><default-field><hidden/></default-field></field>
+                            <field name="activeOrgId"><default-field><hidden/></default-field></field>
+                            <field name="productStoreId"><default-field><hidden/></default-field></field>
                             <field name="productId"><default-field title="Plan">
                                 <drop-down>
                                     <entity-options key="${productId}" text="ProductNameTemplate">
@@ -820,7 +825,6 @@ along with this software (see the LICENSE.md file). If not, see
 
                     <form-list name="PlanFormList" list="planList">
                         <row-actions>
-                            <log level="warn" message="PPP: $partyId - $productId - $fromDate"/>
                             <entity-find-one entity-name="mantle.product.Product" value-field="productField">
                                 <field-map field-name="productId" from="productId"/>
                             </entity-find-one>
