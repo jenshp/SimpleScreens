@@ -118,6 +118,19 @@ along with this software (see the LICENSE.md file). If not, see
         </default-response>
     </transition>
 
+    <!-- ************************** MOIT ******************************* -->
+    <transition name="removeUserPlan">
+        <service-call name="delete#mantle.product.ProductParty"/>
+        <default-response url="."></default-response>
+    </transition>
+    <transition name="createUserPlan">
+        <actions>
+            <log level="warn" message="activeOrgId: $activeOrgId - $context"/>
+            <service-call name="moit.cowork.UserServices.add#UserPlanToOrganization" in-map="[userId:userId, partyId:partyId, activeOrgId:activeOrgId, productId:productId, productStoreId:productStoreId, fromDate:fromDate]"/>
+        </actions>
+        <default-response url="."></default-response>
+    </transition>
+
     <actions>
         <entity-find-one entity-name="mantle.party.PartyDetail" value-field="party"/>
         <if condition="party == null"><return error="true" message="Party not found with ID ${partyId}"/></if>
@@ -158,6 +171,7 @@ along with this software (see the LICENSE.md file). If not, see
 
         <entity-find entity-name="mantle.party.PartyRole" list="partyRoleList"><econdition field-name="partyId"/></entity-find>
         <set field="roleTypeIdList" from="partyRoleList*.roleTypeId"/>
+
     </actions>
     <widgets>
         <container-row><row-col lg="6">
@@ -774,12 +788,35 @@ along with this software (see the LICENSE.md file). If not, see
         </row-col><row-col lg="6">
             <!-- ========== Right Column ========== -->
 
-            <section name="MembershipSection"><actions>
-                <service-call name="moit.cowork.UserServices.get#MembershipByOrganization" in-map="[partyId:partyId]" out-map="context"/>
+            <!-- ========== MOIT ============  -->
 
+            <section name="PlanSection"><actions>
+                <!--service-call name="moit.cowork.UserServices.get#PlanByOrganization" in-map="[partyId:partyId]" out-map="context"/-->
+                <entity-find entity-name="moit.cowork.PartyPlanView" list="planList">
+                    <econdition field-name="partyId" from="partyId"/>
+                </entity-find>
 
             </actions><widgets>
-                <container-box><box-header title="Memberships"/><box-toolbar>
+                <container-box><box-header title="Plans"/><box-toolbar>
+                    <container-dialog id="AddPlanDialog" button-text="Add Plan">
+                        <form-single name="CreateUserPlan" transition="createUserPlan">
+                            <field name="userId"><default-field><hidden/></default-field></field>
+                            <field name="partyId" from="partyId"><default-field><hidden/></default-field></field>
+                            <field name="activeOrgId"><default-field><hidden/></default-field></field>
+                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                            <field name="productId"><default-field title="Plan">
+                                <drop-down>
+                                    <entity-options key="${productId}" text="ProductNameTemplate">
+                                        <entity-find entity-name="mantle.product.Product">
+                                            <econdition field-name="productTypeEnumId" from="'PtConfigurable'"/>
+                                            <order-by field-name="productName"/></entity-find>
+                                    </entity-options>
+                                </drop-down>
+                            </default-field></field>
+                            <field name="fromDate" from="ec.user.nowTimestamp"><default-field><date-time/></default-field></field>
+                            <field name="submitButton"><default-field title="Add"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
                 </box-toolbar><box-body>
                     <!--section-iterate name="MembershipIterateSection" list="membershipList" entry="membershipEntry"><actions>
                         <entity-find-one entity-name="mantle.product.Product" value-field="product">
@@ -789,13 +826,25 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="${membershipEntry} - ${membershipName}" type="p"/>
                     </widgets></section-iterate-->
 
-                    <form-list name="MembershipFormList" list="membershipList" skip-form="true">
+                    <form-list name="PlanFormList" list="planList">
+                        <row-actions>
+                            <entity-find-one entity-name="mantle.product.Product" value-field="productField">
+                                <field-map field-name="productId" from="productId"/>
+                            </entity-find-one>
+                            <set field="planName" from="productField.productName"/>
+                        </row-actions>
+                        <field name="partyId" from="partyId"><default-field><hidden/></default-field></field>
+                        <field name="fromDate"><default-field><hidden/></default-field></field>
                         <field name="productId"><default-field title="ID">
                             <display/></default-field></field>
-                        <field name="membershipName"><default-field title="Name">
+                        <field name="planName"><default-field title="Name">
                             <display/></default-field></field>
-                        <field name="quantity"><default-field title="Quantity">
-                            <display/></default-field></field>
+                        <!--field name="quantity"><default-field title="Quantity">
+                            <display/></default-field></field-->
+                        <field name="removeButton" align="right"><default-field title="">
+                            <link url="removeUserPlan" icon="glyphicon glyphicon-trash" confirmation="Remove plan?" parameter-map="[productId:productId, partyId:partyId, roleTypeId:'Subscriber']"/>
+                        </default-field></field>
+
                     </form-list>
 
                 </box-body></container-box>
